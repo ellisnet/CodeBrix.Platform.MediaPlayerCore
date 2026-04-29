@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>CodeBrix.Platform.MediaPlayerCore</AssemblyName>
+    <RootNamespace>CodeBrix.Platform.MediaPlayerCore</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>CodeBrix.Platform.MediaPlayerCore.LgplLicenseForever</PackageId>
+    <!--
+      IMPORTANT — DELIBERATE EXCEPTION TO THE NORMAL CODEBRIX VERSIONING SCHEME.
+
+      The MAJOR version of CodeBrix.Platform.MediaPlayerCore MUST match the
+      MAJOR version of the native libvlc library it wraps. This library is a
+      port of LibVLCSharp 3.9.7, which targets libvlc 3.x — therefore the
+      managed package's MAJOR is pinned at 3.
+
+      At runtime, Core.EnsureVersionsMatch() (see Core/Core.cs) reads
+      Assembly.GetExecutingAssembly().GetName().Version.Major and throws
+      VLCException if it does not equal the native libvlc major version.
+      Bumping MAJOR to anything other than libvlc's major will make every
+      LibVLC instantiation throw.
+
+      The normal CodeBrix date-driven versioning does NOT apply to this
+      library. Only bump MAJOR here when (and if) this library is re-ported
+      from a future LibVLCSharp that targets a newer libvlc major — e.g.
+      LibVLCSharp 4.x against libvlc 4.x, at which point bump to 4.0.x and
+      update the rationale in THIRD-PARTY-NOTICES.txt.
+    -->
+    <Version>3.0.117</Version>
+    <Product>CodeBrix.Platform.MediaPlayerCore</Product>
+    <Title>CodeBrix.Platform.MediaPlayerCore</Title>
+    <Authors>Jeremy Ellis</Authors>
+    <Description>A fully managed, cross-platform audio / video media-player library for .NET 10. A drop-in-compatible port of LibVLCSharp 3.9.7 — the official .NET wrapper around VideoLAN's LibVLC library — narrowed to the cross-platform managed core. Requires the native libvlc runtime to be installed or referenced via the official VideoLAN.LibVLC.* NuGet packages.</Description>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageProjectUrl>https://github.com/ellisnet/CodeBrix.Platform.MediaPlayerCore</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ellisnet/CodeBrix.Platform.MediaPlayerCore</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageIcon>icon-codebrix-128.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <Copyright>Copyright (C) VideoLAN and the LibVLCSharp authors. Copyright (c) 2026 Jeremy Ellis and contributors.</Copyright>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <IsPackable>true</IsPackable>
+    <PackageTags>video;audio;media;player;libvlc;vlc;streaming;CodeBrix</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\icon-codebrix-128.png" Pack="true" PackagePath="" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="" />
+    <None Include="..\..\AGENT-README.txt" Pack="true" PackagePath="" />
+    <None Include="..\..\THIRD-PARTY-NOTICES.txt" Pack="true" PackagePath="" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="" />
+  </ItemGroup>
+
+</Project>
