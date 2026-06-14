@@ -1,5 +1,5 @@
-All agent-oriented documentation for this project — including API reference, code examples, installation, common pitfalls, and architectural guidance — is maintained in a single file:
+This project's complete documentation for AI coding agents — including API reference, usage examples, installation instructions, common pitfalls, and architectural guidance — is maintained in a single file:
 
 → **[./AGENT-README.txt](./AGENT-README.txt)**
 
-Read that file before making changes to or consuming this library.
+Read that file in full before making changes to, or consuming, this library.
