@@ -8,9 +8,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <PackageId>CodeBrix.Platform.MediaPlayerCore.LgplLicenseForever</PackageId>
-    <!--
+  <!--
       IMPORTANT — DELIBERATE EXCEPTION TO THE NORMAL CODEBRIX VERSIONING SCHEME.
 
       The MAJOR version of CodeBrix.Platform.MediaPlayerCore MUST match the
@@ -24,13 +22,62 @@
       Bumping MAJOR to anything other than libvlc's major will make every
       LibVLC instantiation throw.
 
-      The normal CodeBrix date-driven versioning does NOT apply to this
-      library. Only bump MAJOR here when (and if) this library is re-ported
-      from a future LibVLCSharp that targets a newer libvlc major — e.g.
-      LibVLCSharp 4.x against libvlc 4.x, at which point bump to 4.0.x and
-      update the rationale in THIRD-PARTY-NOTICES.txt.
+      The normal CodeBrix standard of setting the Major version to 1 does not
+      apply to this library/package. Only bump MAJOR here when (and if) this 
+      library is re-ported from a future LibVLCSharp that targets a newer libvlc 
+      major — e.g. LibVLCSharp 4.x against libvlc 4.x, at which point bump to 4.0.x 
+      and update the rationale in THIRD-PARTY-NOTICES.txt.
+      
+      Note that the next comment is the "standard" version explainer comment and 
+      has not been modified, so it still talks about setting to the major version
+      to 1, but this can be ignored for this library/package.
     -->
-    <Version>3.0.117</Version>
+
+  <!--
+    Package / assembly version: date-stamped and auto-incrementing.
+
+    Format:  1.<x>.<y>.<z>   (every field is derived from UTC "now")
+
+      1  (major)     Always 1 for this library.
+      x  (minor)     Whole years since $(_VersionBaseYear).
+                     With base 2026: 2026=0, 2027=1, 2028=2, ...
+      y  (build)     Day of year, 1-based inclusive, UTC.
+                     Jan 1 = 1, Feb 1 = 32, Dec 31 = 365 (366 in a leap year).
+      z  (revision)  Minute of day, UTC, range 0 to 1439.
+                     00:00 = 0, 23:59 = 1439.
+
+    The version is always strictly increasing over time:
+      * within a day, z grows;
+      * at a day boundary, y increments and outranks z resetting to 0;
+      * at a (UTC) year boundary, x increments and outranks y and z resetting.
+
+    Notes / caveats:
+      * All fields read from System.DateTime.UtcNow, so a local dev build and a
+        UTC CI build agree on the value. Math.Floor on the minutes keeps z in
+        0..1439 (plain rounding could land on 1440 late in the day).
+      * Because the value depends on the clock, every build produces a NEW
+        version. With GeneratePackageOnBuild=true that means a fresh .nupkg on
+        each build, and two builds in the SAME UTC minute produce the SAME
+        version (so do not publish two packages from within one minute).
+      * This is date-stamp versioning, not SemVer: minor encodes the year and
+        major is pinned to 1, so major/minor do not signal API compatibility.
+      * To re-baseline the minor number, change _VersionBaseYear below.
+  -->
+  <PropertyGroup>
+    <_VersionBaseYear>2026</_VersionBaseYear>
+    <_VersionYears>$([MSBuild]::Subtract($([System.DateTime]::UtcNow.Year), $(_VersionBaseYear)))</_VersionYears>
+    <_VersionDayOfYear>$([System.DateTime]::UtcNow.DayOfYear)</_VersionDayOfYear>
+    <_VersionMinuteOfDay>$([System.Convert]::ToInt32($([System.Math]::Floor($([System.DateTime]::UtcNow.TimeOfDay.TotalMinutes)))))</_VersionMinuteOfDay>
+    <!--See note above about using 3 instead of 1: <BuildVersion>1.$(_VersionYears).$(_VersionDayOfYear).$(_VersionMinuteOfDay)</BuildVersion>-->
+    <BuildVersion>3.$(_VersionYears).$(_VersionDayOfYear).$(_VersionMinuteOfDay)</BuildVersion>
+    <Version>$(BuildVersion)</Version>
+    <AssemblyVersion>$(BuildVersion)</AssemblyVersion>
+    <FileVersion>$(BuildVersion)</FileVersion>
+  </PropertyGroup>
+
+  <!-- NuGet package properties -->
+  <PropertyGroup>
+    <PackageId>CodeBrix.Platform.MediaPlayerCore.LgplLicenseForever</PackageId>
     <Product>CodeBrix.Platform.MediaPlayerCore</Product>
     <Title>CodeBrix.Platform.MediaPlayerCore</Title>
     <Authors>Jeremy Ellis</Authors>
