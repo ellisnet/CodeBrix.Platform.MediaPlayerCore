@@ -31,6 +31,10 @@
       Note that the next comment is the "standard" version explainer comment and 
       has not been modified, so it still talks about setting to the major version
       to 1, but this can be ignored for this library/package.
+      
+      Also note that the only change to the versioning <PropertyGroup> below - 
+      which takes it away from the "standard" CodeBrix XML is that the 
+      <BuildVersion> take has a "3." instead of a "1."
     -->
 
   <!--
@@ -68,7 +72,6 @@
     <_VersionYears>$([MSBuild]::Subtract($([System.DateTime]::UtcNow.Year), $(_VersionBaseYear)))</_VersionYears>
     <_VersionDayOfYear>$([System.DateTime]::UtcNow.DayOfYear)</_VersionDayOfYear>
     <_VersionMinuteOfDay>$([System.Convert]::ToInt32($([System.Math]::Floor($([System.DateTime]::UtcNow.TimeOfDay.TotalMinutes)))))</_VersionMinuteOfDay>
-    <!--See note above about using 3 instead of 1: <BuildVersion>1.$(_VersionYears).$(_VersionDayOfYear).$(_VersionMinuteOfDay)</BuildVersion>-->
     <BuildVersion>3.$(_VersionYears).$(_VersionDayOfYear).$(_VersionMinuteOfDay)</BuildVersion>
     <Version>$(BuildVersion)</Version>
     <AssemblyVersion>$(BuildVersion)</AssemblyVersion>
