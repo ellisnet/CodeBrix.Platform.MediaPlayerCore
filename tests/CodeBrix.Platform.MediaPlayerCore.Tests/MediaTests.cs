@@ -65,7 +65,8 @@ public class MediaTests : BaseSetup
         media.AddOption("-sout-all");
     }
 
-    [Fact]
+    [Fact(Skip = "Needs real A/V output + network; set MEDIAPLAYERCORE_RUN_PLAYBACK_TESTS=1 to run",
+          SkipUnless = nameof(BaseSetup.CanRunMediaPlaybackTests), SkipType = typeof(BaseSetup))]
     public async Task CreateRealMedia()
     {
         using (var media = new Media(_libVLC, RealStreamMediaPath, FromType.FromLocation))
@@ -81,7 +82,8 @@ public class MediaTests : BaseSetup
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Needs real A/V output + network; set MEDIAPLAYERCORE_RUN_PLAYBACK_TESTS=1 to run",
+          SkipUnless = nameof(BaseSetup.CanRunMediaPlaybackTests), SkipType = typeof(BaseSetup))]
     public async Task CreateRealMediaFromUri()
     {
         using (var media = new Media(_libVLC, new Uri(RealStreamMediaPath, UriKind.Absolute)))
@@ -155,7 +157,8 @@ public class MediaTests : BaseSetup
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Needs real A/V output + network; set MEDIAPLAYERCORE_RUN_PLAYBACK_TESTS=1 to run",
+          SkipUnless = nameof(BaseSetup.CanRunMediaPlaybackTests), SkipType = typeof(BaseSetup))]
     public async Task CreateMediaFromStreamMultiplePlay()
     {
         using var mp = new MediaPlayer(_libVLC);
@@ -173,7 +176,8 @@ public class MediaTests : BaseSetup
         mp.Play(media);
     }
 
-    [Fact]
+    [Fact(Skip = "Needs real A/V output + network; set MEDIAPLAYERCORE_RUN_PLAYBACK_TESTS=1 to run",
+          SkipUnless = nameof(BaseSetup.CanRunMediaPlaybackTests), SkipType = typeof(BaseSetup))]
     public async Task CreateMultipleMediaFromStreamPlay()
     {
         var libVLC1 = new LibVLC("--no-audio", "--no-video");

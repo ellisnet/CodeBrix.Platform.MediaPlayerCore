@@ -31,15 +31,16 @@ public class MediaPlayerTests : BaseSetup
         Debug.WriteLine(t);
     }
     
-    [Fact]
+    [Fact(Skip = "Needs real A/V output + network; set MEDIAPLAYERCORE_RUN_PLAYBACK_TESTS=1 to run",
+          SkipUnless = nameof(BaseSetup.CanRunMediaPlaybackTests), SkipType = typeof(BaseSetup))]
     public async Task TrackDescription()
     {
         var mp = new MediaPlayer(_libVLC);
         var media = new Media(_libVLC, new Uri(RealStreamMediaPath));
         var tcs = new TaskCompletionSource<bool>();
-        
-        mp.Media = media;
-        mp.Play();
+
+        // Subscribe BEFORE Play() so the Playing event can't fire before we are
+        // listening for it (a race that would otherwise leave the wait stuck).
         mp.Playing += (sender, args) =>
         {
             var description = mp.AudioTrackDescription;
@@ -47,18 +48,21 @@ public class MediaPlayerTests : BaseSetup
             (description).Should().NotBeEmpty();
             tcs.SetResult(true);
         };
-        (await tcs.Task).Should().BeTrue();
+        mp.Media = media;
+        mp.Play();
+        await AwaitMediaEventAsync(tcs.Task);
     }
 
-    [Fact]
+    [Fact(Skip = "Needs real A/V output + network; set MEDIAPLAYERCORE_RUN_PLAYBACK_TESTS=1 to run",
+          SkipUnless = nameof(BaseSetup.CanRunMediaPlaybackTests), SkipType = typeof(BaseSetup))]
     public async Task ChapterDescriptions()
     {
         var mp = new MediaPlayer(_libVLC);
         var media = new Media(_libVLC, "https://auphonic.com/media/blog/auphonic_chapters_demo.m4a", FromType.FromLocation);
         var tcs = new TaskCompletionSource<bool>();
 
-        mp.Media = media;
-        mp.Play();
+        // Subscribe BEFORE Play() so the Playing event can't fire before we are
+        // listening for it (a race that would otherwise leave the wait stuck).
         mp.Playing += (sender, args) =>
         {
             var chapters = mp.FullChapterDescriptions(-1);
@@ -66,10 +70,13 @@ public class MediaPlayerTests : BaseSetup
             (chapters.Length == mp.ChapterCount).Should().BeTrue();
             tcs.SetResult(true);
         };
-        (await tcs.Task).Should().BeTrue();
+        mp.Media = media;
+        mp.Play();
+        await AwaitMediaEventAsync(tcs.Task);
     }
 
-    [Fact]
+    [Fact(Skip = "Needs real A/V output + network; set MEDIAPLAYERCORE_RUN_PLAYBACK_TESTS=1 to run",
+          SkipUnless = nameof(BaseSetup.CanRunMediaPlaybackTests), SkipType = typeof(BaseSetup))]
     public async Task Play()
     {
         var media = new Media(_libVLC, new Uri(RealStreamMediaPath));
@@ -88,7 +95,8 @@ public class MediaPlayerTests : BaseSetup
     int callCountRegisterOne = 0;
     int callCountRegisterTwo = 0;
 
-    [Fact]
+    [Fact(Skip = "Needs real A/V output + network; set MEDIAPLAYERCORE_RUN_PLAYBACK_TESTS=1 to run",
+          SkipUnless = nameof(BaseSetup.CanRunMediaPlaybackTests), SkipType = typeof(BaseSetup))]
     public async Task EventFireOnceForeachRegistration()
     {
         try
@@ -173,7 +181,8 @@ public class MediaPlayerTests : BaseSetup
         (IntPtr.Zero == mp.NativeReference).Should().BeTrue();
     }
 
-    [Fact]
+    [Fact(Skip = "Needs real A/V output + network; set MEDIAPLAYERCORE_RUN_PLAYBACK_TESTS=1 to run",
+          SkipUnless = nameof(BaseSetup.CanRunMediaPlaybackTests), SkipType = typeof(BaseSetup))]
     public async Task UpdateViewpoint()
     {
         var mp = new MediaPlayer(_libVLC);

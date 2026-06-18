@@ -60,7 +60,8 @@ public class EventManagerTests : BaseSetup
         (eventCalled).Should().BeTrue();
     }
 
-    [Fact]
+    [Fact(Skip = "Needs real A/V output + network; set MEDIAPLAYERCORE_RUN_PLAYBACK_TESTS=1 to run",
+          SkipUnless = nameof(BaseSetup.CanRunMediaPlaybackTests), SkipType = typeof(BaseSetup))]
     public async Task OpeningStateChanged()
     {
         var media = new Media(_libVLC, RealMp3Path);
@@ -78,7 +79,7 @@ public class EventManagerTests : BaseSetup
 
         var mp = new MediaPlayer(media);
         mp.Play();
-        (await tcs.Task).Should().BeTrue();
+        await AwaitMediaEventAsync(tcs.Task);
         (openingCalled).Should().BeTrue();
     }
 }

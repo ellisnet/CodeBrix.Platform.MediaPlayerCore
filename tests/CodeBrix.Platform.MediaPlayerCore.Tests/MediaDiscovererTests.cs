@@ -13,7 +13,8 @@ namespace CodeBrix.Platform.MediaPlayerCore.Tests; //was previously: LibVLCSharp
 
 public class MediaDiscovererTests : BaseSetup
 {
-    [Fact]
+    [Fact(Skip = "Needs live LAN/network discovery service; set MEDIAPLAYERCORE_RUN_PLAYBACK_TESTS=1 to run",
+          SkipUnless = nameof(BaseSetup.CanRunMediaPlaybackTests), SkipType = typeof(BaseSetup))]
     public void CreateStartAndStopDiscoverer()
     {
         var mds = _libVLC.MediaDiscoverers(MediaDiscovererCategory.Lan);
@@ -24,7 +25,8 @@ public class MediaDiscovererTests : BaseSetup
         (md.IsRunning).Should().BeFalse();
     }
 
-    [Fact]
+    [Fact(Skip = "Needs live LAN/network discovery service; set MEDIAPLAYERCORE_RUN_PLAYBACK_TESTS=1 to run",
+          SkipUnless = nameof(BaseSetup.CanRunMediaPlaybackTests), SkipType = typeof(BaseSetup))]
     public async Task DisposeMediaDiscoverer()
     {
         var mds = _libVLC.MediaDiscoverers(MediaDiscovererCategory.Lan);
