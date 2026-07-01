@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using CodeBrix.Platform.MediaPlayerCore.Helpers;
 using CodeBrix.Platform.MediaPlayerCore.Structures;
@@ -1398,6 +1399,62 @@ public class MediaPlayer : Internal
         {
             var aspectRatioUtf8 = value.ToUtf8();
             MarshalUtils.PerformInteropAndFree(() => Native.LibVLCVideoSetAspectRatio(NativeReference, aspectRatioUtf8), aspectRatioUtf8);
+        }
+    }
+
+    /// <summary>
+    /// Applies "Uniform" (fit-screen / letterbox) scaling for the currently available video
+    /// track so the whole frame fits inside a view of the given size without cropping, then
+    /// clears any explicit <see cref="AspectRatio"/>. If no video track is available, nothing
+    /// is changed.
+    /// </summary>
+    /// <param name="viewWidth">Target view width, in view pixels (DIPs).</param>
+    /// <param name="viewHeight">Target view height, in view pixels (DIPs).</param>
+    /// <param name="scalingFactor">Display scaling factor (raw pixels per view pixel).</param>
+    /// <remarks>
+    /// This encapsulates the "FitScreen" computation from this library's internal
+    /// AspectRatioManager — the LGPL-2.1-or-later port of LibVLCSharp 3.9.7 — so that UI hosts
+    /// can request uniform scaling by supplying only their view size and scaling factor,
+    /// without taking on the full MediaPlayerElement manager stack or re-implementing the
+    /// LibVLC-specific aspect-ratio math themselves.
+    /// </remarks>
+    public void ApplyUniformScale(double viewWidth, double viewHeight, double scalingFactor)
+    {
+        var media = Media;
+        if (media == null)
+        {
+            return;
+        }
+        try
+        {
+            // When there is no video track, FirstOrDefault returns a default MediaTrack
+            // whose Data.Video is a zero-sized VideoTrack; the width/height guard below
+            // then treats that as "cannot fit" (Scale = 0), matching the prior behavior.
+            var track = media.Tracks.FirstOrDefault(t => t.TrackType == TrackType.Video).Data.Video;
+            var videoWidth = track.Width;
+            var videoHeight = track.Height;
+            if (videoWidth == 0 || videoHeight == 0)
+            {
+                Scale = 0;
+            }
+            else
+            {
+                if (track.SarNum != track.SarDen)
+                {
+                    videoWidth = videoWidth * track.SarNum / track.SarDen;
+                }
+
+                var ar = videoWidth / (double)videoHeight;
+                var dar = viewWidth / viewHeight;
+                var displayWidth = viewWidth * scalingFactor;
+                var displayHeight = viewHeight * scalingFactor;
+                Scale = (float)(dar >= ar ? (displayWidth / videoWidth) : (displayHeight / videoHeight));
+            }
+            AspectRatio = null;
+        }
+        finally
+        {
+            media.Dispose();
         }
     }
 
