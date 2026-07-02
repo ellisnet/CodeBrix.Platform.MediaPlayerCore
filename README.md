@@ -2,7 +2,7 @@
 
 A fully managed, cross-platform audio / video media-player library for .NET, providing a comprehensive multimedia API that can render video, output audio, and control playback across Windows, Linux, and macOS desktops.
 
-CodeBrix.Platform.MediaPlayerCore is a .NET 10 drop-in-compatible port of the `LibVLCSharp` NuGet package (version 3.9.7) — the official .NET wrapper around VideoLAN's LibVLC library. CodeBrix.Platform.MediaPlayerCore has no managed NuGet dependencies of its own; it requires the native `libvlc` library to be installed or referenced via one of the official `VideoLAN.LibVLC.*` runtime packages (`VideoLAN.LibVLC.Windows`, `VideoLAN.LibVLC.Linux`, etc.).
+CodeBrix.Platform.MediaPlayerCore is a .NET 10 drop-in-compatible port of the `LibVLCSharp` NuGet package (version 3.9.7) — the official .NET wrapper around VideoLAN's LibVLC library. CodeBrix.Platform.MediaPlayerCore has no managed NuGet dependencies of its own; it requires the native `libvlc` library to be installed or referenced via one of the official `VideoLAN.LibVLC.*` runtime packages (e.g. `VideoLAN.LibVLC.Windows`). On Linux there is no VideoLAN NuGet runtime package — install libvlc via the system package manager instead (e.g. `sudo apt install libvlc5 vlc-plugin-base` on Debian/Ubuntu).
 
 CodeBrix.Platform.MediaPlayerCore is provided as a .NET 10 library and associated `CodeBrix.Platform.MediaPlayerCore.LgplLicenseForever` NuGet package.
 

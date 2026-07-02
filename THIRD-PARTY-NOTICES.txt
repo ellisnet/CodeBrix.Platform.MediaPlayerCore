@@ -92,10 +92,11 @@ https://github.com/ellisnet/CodeBrix.Platform.MediaPlayerCore/issues
    an official VideoLAN NuGet package:
 
      VideoLAN.LibVLC.Windows   (for Windows)
-     VideoLAN.LibVLC.Linux     (for Linux)
      VideoLAN.LibVLC.Mac       (for macOS)
 
-   or install libvlc via the system package manager. See
+   or install libvlc via the system package manager (the only option on
+   Linux, where no VideoLAN NuGet runtime package exists — e.g.
+   `sudo apt install libvlc5 vlc-plugin-base` on Debian/Ubuntu). See
    https://www.videolan.org/ for terms that apply to the native
    binaries (which include additional codec and patent considerations
    not covered by this notice).

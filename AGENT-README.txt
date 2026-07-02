@@ -42,7 +42,9 @@ installing.
 
 The library depends on the native libvlc runtime. On Windows install
 VideoLAN.LibVLC.Windows via NuGet; on Linux install libvlc via the system
-package manager (e.g. `apt install vlc` on Debian/Ubuntu); on macOS install
+package manager (`sudo apt install libvlc5 vlc-plugin-base` on
+Debian/Ubuntu — the library plus base plugins; the full `vlc` desktop
+application is NOT required); on macOS install
 VLC.app or VideoLAN.LibVLC.Mac via NuGet. The library will search the
 standard system search paths at runtime; call `Core.Initialize()` before
 constructing any LibVLC instance to ensure the native library is loaded.
