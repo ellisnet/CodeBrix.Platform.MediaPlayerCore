@@ -100,6 +100,21 @@ Main entry point (in order of typical use):
     Events: Playing, Paused, Stopped, EndReached, TimeChanged, ...
     Dispose()
 
+  VideoFrameSink                  (CodeBrix addition, not in LibVLCSharp)
+    new VideoFrameSink(MediaPlayer mediaPlayer, int bufferCount = 3)
+    FrameReady                      -- per-frame event: 32-bit BGRA pixels in
+                                       CPU memory (libvlc "vmem" output);
+                                       copy the buffer before returning
+    FormatChanged                   -- negotiated dimensions/pitch changed
+    Width, Height, PitchBytes, BufferCount, MediaPlayer
+    Dispose()                       -- only after the player is stopped/disposed
+    Windowing-system-agnostic video rendering: works on hosts where libvlc
+    has no window-embedding API (Wayland, framebuffer) and anywhere else.
+    Construct BEFORE Play(). Events are raised on libvlc threads: handlers
+    must copy pixels quickly, must not touch UI objects directly, and must
+    not call back into MediaPlayer members. Requires only libvlc's base
+    plugin set (`sudo apt install libvlc5 vlc-plugin-base` on Debian/Ubuntu).
+
   MediaDiscoverer / RendererDiscoverer / Equalizer / Dialog
     See the source files under src/CodeBrix.Platform.MediaPlayerCore/ for
     exact signatures. API parity with LibVLCSharp 3.9.7 is the target.
@@ -177,6 +192,10 @@ the CodeBrix family:
         MediaPlayer.cs              -- playback engine
         RendererDiscoverer.cs       -- Chromecast/UPnP discovery
         StreamMediaInput.cs         -- Stream-backed input
+        VideoFrameSink.cs           -- CodeBrix addition: renders video into
+                                       CPU memory (vmem) and raises FrameReady
+                                       per frame; windowing-system-agnostic
+                                       (event args live in Events/)
         VLCException.cs             -- domain exception
 
 

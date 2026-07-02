@@ -35,6 +35,10 @@
     <None Update="motörhead.mp3">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <!-- Test-fixture mp4 (with a video track) used by VideoFrameSinkTests. -->
+    <None Update="sample.mp4">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

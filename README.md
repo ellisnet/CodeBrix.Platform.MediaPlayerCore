@@ -41,6 +41,30 @@ mediaPlayer.Play();
 // ... keep the process alive while playback runs ...
 ```
 
+### Render video frames into memory (windowing-system-agnostic)
+
+```csharp
+using CodeBrix.Platform.MediaPlayerCore;
+
+Core.Initialize();
+
+using var libVLC = new LibVLC();
+using var mediaPlayer = new MediaPlayer(libVLC);
+using var sink = new VideoFrameSink(mediaPlayer); // attach BEFORE Play()
+
+sink.FrameReady += (_, frame) =>
+{
+    // frame.Plane points at 32-bit BGRA pixels (frame.Width x frame.Height,
+    // frame.PitchBytes per scanline). Raised on a libvlc thread; copy the
+    // pixels (e.g. into an SKImage or bitmap) before returning.
+};
+
+mediaPlayer.Media = new Media(libVLC, new Uri("file:///path/to/video.mp4"));
+mediaPlayer.Play();
+```
+
+`VideoFrameSink` is a CodeBrix addition (not part of the LibVLCSharp 3.9.7 API surface). Because it renders through libvlc's memory output ("vmem") instead of an operating-system window, it works on platforms where libvlc has no window-embedding API — including Wayland and bare-framebuffer Linux hosts — and requires only libvlc's base plugin set.
+
 ### Enumerate audio output devices
 
 ```csharp
