@@ -14,6 +14,9 @@ public enum WebcamVideoFormat
     /// The camera's native Motion-JPEG stream muxed into an AVI container with no
     /// transcoding — near-zero CPU. Requires a camera streaming MJPEG, cannot burn in
     /// overlays, and carries no audio track (captured audio arrives as a sidecar file).
+    /// Linux/macOS only: the Windows Media Foundation engine does not support MJPEG
+    /// passthrough, and <see cref="WebcamSession.StartRecording"/> throws there —
+    /// use <see cref="Mp4H264"/> (hardware-accelerated where available) instead.
     /// </summary>
     MjpegAvi,
 }

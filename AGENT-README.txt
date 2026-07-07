@@ -84,28 +84,19 @@ use the full package name when installing. All packages from this repo
 always publish at the same version; never mix versions.
 
 NATIVE LIBVLC REQUIREMENT — READ THIS. All three packages are pure managed
-assemblies; NONE of them bundles the native libvlc engine. Every feature
-that touches the engine (playback, WebcamSession capture, recording,
-VideoFrameSink/Source) HARD-REQUIRES libvlc to be present on the machine at
-runtime, and what "present" means differs per platform:
+assemblies; NONE of them bundles the native libvlc engine. The playback
+packages (CodeBrix.MediaCore / CodeBrix.Platform.MediaPlayerCore) HARD-
+REQUIRE libvlc at runtime on every platform. CodeBrix.Webcam requires it
+ONLY on Linux and macOS — on Windows, webcam capture and recording run on
+the operating system's built-in Media Foundation engine and need NO native
+runtime and NO VideoLAN packages at all (see CODEBRIX.WEBCAM ON WINDOWS
+below). What "libvlc present" means differs per platform:
 
-  Windows:  an installed VLC desktop application is NOT used and NOT
-            searched on Windows — NuGet package references are the only
-            supported mechanism. All applications that run on Windows and
-            consume the CodeBrix.Webcam library (or the
-            CodeBrix.Webcam.LgplLicenseForever nuget package) MUST have the
-            following TWO package references:
-
-              <PackageReference Include="VideoLAN.LibVLC.Windows" Version="{latest version}" />
-              <!--
-              NOTE:
-              As of version 3.0.21 (September 2024) of the VideoLAN.LibVLC.Windows Nuget package
-              referenced above, a critical 'libdshow_plugin.dll' library is no longer included
-              with the package.  Instead, you also have to have the VideoLAN.LibVLC.Windows.GPL
-              package referenced below.  Note that this .GPL package carries a GPL-2.0-or-later
-              license, which likely has implications for the licensing of your application.
-              -->
-              <PackageReference Include="VideoLAN.LibVLC.Windows.GPL" Version="{latest version}" />
+  Windows:  (playback packages only) the CONSUMING APPLICATION must
+            reference the VideoLAN.LibVLC.Windows NuGet package. An
+            installed VLC desktop application is NOT used and NOT searched
+            on Windows — the NuGet reference is the only supported
+            mechanism. CodeBrix.Webcam needs none of this on Windows.
   Linux:    install the runtime libraries via the system package manager:
             `sudo apt install libvlc5 vlc-plugin-base` on Debian/Ubuntu.
             Neither the full `vlc` desktop application nor the build-time
@@ -131,23 +122,23 @@ runtime, and what "present" means differs per platform:
             effectively THE route, and it is the one this repo verifies.)
 
 So: "the VLC application must be installed" is TRUE on macOS, wrong on
-Windows (NuGet reference instead), and wrong on Linux (runtime libraries
-instead).
+Windows (NuGet reference instead, and only for playback), and wrong on
+Linux (runtime libraries instead).
 
 What happens when libvlc is missing or cannot be loaded:
   - Engine level: `Core.Initialize()` (or the first `new LibVLC()`) throws
     CodeBrix.Platform.MediaPlayerCore.VLCException listing the search paths
     it tried.
-  - CodeBrix.Webcam level: opening a session (WebcamSession.Start) wraps
-    that failure in a CodeBrix.Webcam.WebcamException whose message states
-    the per-platform fix (install VLC.app / add VideoLAN.LibVLC.Windows /
-    apt install ...) — consumers of CodeBrix.Webcam never need to catch an
-    engine exception type, consistent with the no-leak rule.
+  - CodeBrix.Webcam level (Linux/macOS): opening a session
+    (WebcamSession.Start) wraps that failure in a
+    CodeBrix.Webcam.WebcamException whose message states the per-platform
+    fix — consumers of CodeBrix.Webcam never need to catch an engine
+    exception type, consistent with the no-leak rule. On Windows a missing
+    libvlc cannot affect CodeBrix.Webcam at all.
   - Webcam device ENUMERATION does not need libvlc at all: the device
     providers talk to the OS directly (DirectShow / V4L2 / AVFoundation),
     so WebcamDevices.GetImagingMediaDeviceListAsync works — and returns
-    full capability data — on a machine with no libvlc installed. Only
-    opening a WebcamSession (and the engine/playback APIs) requires it.
+    full capability data — on a machine with no libvlc installed.
 
 Call `Core.Initialize()` before constructing any LibVLC instance to ensure
 the native library is loaded (CodeBrix.Webcam does this internally).
@@ -331,13 +322,55 @@ every file kept its namespace and content verbatim):
                                        (straight-alpha BGRA burn-in),
                                        WebcamVideoFormat, WebcamRecordingOptions,
                                        WebcamRecordingResult
-        Internal/                   -- engine glue (WebcamEngine, capture Media
-                                       factory, overlay compositor, sidecar WAV
-                                       recorder) and per-OS providers:
+        Internal/                   -- the ICaptureBackend seam (WebcamSession is
+                                       backend-agnostic: overlay tee, photos,
+                                       FrameReceived, locking) with two engines:
+                                       LibVlcCaptureBackend (Linux/macOS — libvlc
+                                       player + VideoFrameSink + sout recording,
+                                       WebcamEngine, capture Media factory) and
+                                       Windows/MediaFoundationCaptureBackend
+                                       (IMFSourceReader capture, IMFSinkWriter
+                                       MP4/H.264+AAC recording, WASAPI audio; no
+                                       libvlc). Overlay compositor is shared.
+                                       Per-OS device providers:
                                        Linux/ (V4L2 via libc ioctls), Windows/
                                        (DirectShow COM), Darwin/ (AVFoundation via
                                        Objective-C-runtime P/Invoke — enumeration,
                                        mode controls, TCC consent; no shim dylib)
+
+
+CODEBRIX.WEBCAM ON WINDOWS
+--------------------------
+On Windows, WebcamSession captures through the operating system's built-in
+Media Foundation engine (src/CodeBrix.Webcam/Internal/Windows/), NOT libvlc
+(implemented 2026-07-06). Key facts:
+
+  - NO native runtime and NO VideoLAN packages are required or used for
+    webcam work on Windows. MF and WASAPI ship with Windows. (Windows 'N'
+    editions need the Media Feature Pack; the failure message says so.)
+  - Capture: IMFSourceReader opened on the enumerated device path; the
+    in-box MFT converters/decoders turn every camera format (YUY2, NV12,
+    MJPEG, H.264-only cameras) into the BGRA frames the shared pipeline
+    expects. Requested modes (size/fps/format) are negotiated against the
+    camera's native type list.
+  - Recording: IMFSinkWriter MP4/H.264 (hardware-accelerated where
+    available) with an in-file AAC track when the session captures a
+    microphone; frame-path (overlay) recordings keep the sidecar-WAV
+    contract. Recording tees off the capture loop, so starting/stopping a
+    recording never interrupts the preview (no restart blink).
+  - LIMITATION: WebcamVideoFormat.MjpegAvi passthrough recording is not
+    supported by the sink writer; StartRecording throws a WebcamException
+    directing callers to Mp4H264. Do not "fix" this by re-introducing
+    libvlc on Windows — keeping the Windows path libvlc-free (and
+    GPL-plugin-free) is deliberate.
+  - Threading: MF/WASAPI objects are NOT apartment-agile. The source
+    reader lives entirely on its capture thread, and every COM-touching
+    control call routes through Internal/Windows/MtaThread — desktop UI
+    threads are STA and would otherwise fail with E_NOINTERFACE. Preserve
+    this discipline when modifying the backend.
+  - Enumeration and camera controls remain DirectShow COM
+    (Windows/DirectShowDeviceProvider) — unchanged, and independent of the
+    capture engine.
 
 
 CODEBRIX.WEBCAM ON MACOS
@@ -408,8 +441,10 @@ Test framework: xUnit v3, asserted with SilverAssertions.
 
 Tests that construct `LibVLC` need the native libvlc library available on
 the host. On Windows CI the `VideoLAN.LibVLC.Windows` package is referenced
-in the test csproj. On Linux the host must have `libvlc` installed via the
-system package manager. Tests that cannot locate libvlc at runtime skip
+in the CodeBrix.Platform.MediaPlayerCore.Tests csproj (engine tests); the
+CodeBrix.Webcam.Tests project needs NO libvlc on Windows (Media Foundation
+backend). On Linux the host must have `libvlc` installed via the system
+package manager. Tests that cannot locate libvlc at runtime skip
 themselves.
 
 LIVE CAMERA TESTS (opt-in): tests/CodeBrix.Webcam.Tests contains

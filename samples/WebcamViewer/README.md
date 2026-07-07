@@ -35,23 +35,10 @@ Solutions:
 - `WebcamViewer.Windows.slnx` — everything above PLUS the native WinUI 3 and WPF
   heads (open on Windows).
 
-The native `libvlc` runtime must be present (`sudo apt install libvlc5 vlc-plugin-base`
-on Debian/Ubuntu). On Windows, all applications that consume the CodeBrix.Webcam
-library (or the `CodeBrix.Webcam.LgplLicenseForever` NuGet package) *must* have the
-following two package references — every Windows head of this sample carries them:
-
-```xml
-<PackageReference Include="VideoLAN.LibVLC.Windows" Version="{latest version}" />
-<!--
-NOTE:
-As of version 3.0.21 (September 2024) of the VideoLAN.LibVLC.Windows Nuget package
-referenced above, a critical 'libdshow_plugin.dll' library is no longer included
-with the package.  Instead, you also have to have the VideoLAN.LibVLC.Windows.GPL
-package referenced below.  Note that this .GPL package carries a GPL-2.0-or-later
-license, which likely has implications for the licensing of your application.
--->
-<PackageReference Include="VideoLAN.LibVLC.Windows.GPL" Version="{latest version}" />
-```
+On Windows, no native runtime and no VideoLAN packages are needed: CodeBrix.Webcam
+captures and records through the operating system's built-in Media Foundation engine.
+On Linux the native `libvlc` runtime must be present (`sudo apt install libvlc5
+vlc-plugin-base` on Debian/Ubuntu); on macOS see the notes below.
 
 macOS notes (`WebcamViewer.MacOS`):
 

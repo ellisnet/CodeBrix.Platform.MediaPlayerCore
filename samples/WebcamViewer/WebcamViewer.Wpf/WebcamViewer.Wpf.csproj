@@ -31,18 +31,6 @@
     <PackageReference Include="CodeBrix.Imaging.ApacheLicenseForever" Version="1.0.164.1087" />
   </ItemGroup>
 
-  <ItemGroup>
-    <!-- Native libvlc runtime for CodeBrix.Webcam: the VideoLAN package lays the
-       libvlc binaries + plugins into the output folder on Windows. -->
-    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.23.1" />
-    <!--
-    NOTE:
-    As of version 3.0.21 (September 2024) of the VideoLAN.LibVLC.Windows Nuget package
-    referenced above, a critical 'libdshow_plugin.dll' library is no longer included 
-    with the package.  Instead, you also have to have the VideoLAN.LibVLC.Windows.GPL
-    package referenced below.  Note that this .GPL package carries a GPL-2.0-or-later 
-    license, which likely has implications for the licensing of your application.
-    -->
-    <PackageReference Include="VideoLAN.LibVLC.Windows.GPL" Version="3.0.23.1" />
-  </ItemGroup>
+  <!-- No VideoLAN/libvlc packages: on Windows, CodeBrix.Webcam captures and records
+       through the operating system's built-in Media Foundation engine. -->
 </Project>

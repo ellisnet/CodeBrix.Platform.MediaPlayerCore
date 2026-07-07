@@ -12,26 +12,13 @@ The heart of this repository is a .NET 10 drop-in-compatible port of the `LibVLC
 
 **Namespace note:** for drop-in compatibility, all types in the first two packages live under the original `CodeBrix.Platform.MediaPlayerCore` namespaces — including the types that ship in the `CodeBrix.MediaCore` assembly. `using CodeBrix.Platform.MediaPlayerCore;` is the right directive for both. This package-name/namespace mismatch is deliberate and permanent. `CodeBrix.Webcam` types live under `CodeBrix.Webcam.*`, and its public API never exposes an engine type (a reflection test in this repository enforces that permanently).
 
-None of these packages bundles the native `libvlc` engine — it must be present on the machine at runtime, and the mechanism differs per platform:
+None of these packages bundles the native `libvlc` engine. The playback packages require it at runtime on every platform; `CodeBrix.Webcam` requires it only on Linux and macOS (on Windows it captures through the built-in Media Foundation engine instead). The mechanism differs per platform:
 
-* **Windows** — reference the official VideoLAN NuGet packages in the *application* project. An installed VLC desktop application is not used on Windows. All applications that run on Windows and consume the CodeBrix.Webcam library (or the `CodeBrix.Webcam.LgplLicenseForever` NuGet package) *must* have the following two package references:
-
-  ```xml
-  <PackageReference Include="VideoLAN.LibVLC.Windows" Version="{latest version}" />
-  <!--
-  NOTE:
-  As of version 3.0.21 (September 2024) of the VideoLAN.LibVLC.Windows Nuget package
-  referenced above, a critical 'libdshow_plugin.dll' library is no longer included
-  with the package.  Instead, you also have to have the VideoLAN.LibVLC.Windows.GPL
-  package referenced below.  Note that this .GPL package carries a GPL-2.0-or-later
-  license, which likely has implications for the licensing of your application.
-  -->
-  <PackageReference Include="VideoLAN.LibVLC.Windows.GPL" Version="{latest version}" />
-  ```
+* **Windows** — `CodeBrix.Webcam` needs no native runtime at all: webcam capture and recording use the operating system's built-in Media Foundation engine, so a webcam-only Windows application references no VideoLAN packages. Only the playback packages (`CodeBrix.MediaCore` / `CodeBrix.Platform.MediaPlayerCore`) require libvlc on Windows — for those, reference the official `VideoLAN.LibVLC.Windows` NuGet package in the *application* project. An installed VLC desktop application is not used on Windows.
 * **Linux** — install the runtime libraries via the system package manager, e.g. `sudo apt install libvlc5 vlc-plugin-base` on Debian/Ubuntu (no VideoLAN NuGet runtime package exists for Linux; the desktop `vlc` application and `libvlc-dev` are not needed).
 * **macOS** — the VLC media player application (`VLC.app`) **must be installed**: download it from [videolan.org/vlc](https://www.videolan.org/vlc/) and drag it into `/Applications`; the loader finds it (and its plugins) automatically. An application may instead bundle the libvlc dylibs itself. Note the `VideoLAN.LibVLC.Mac` NuGet package ships x64-only binaries, so installing VLC is the practical route on Apple Silicon.
 
-If libvlc cannot be loaded, `Core.Initialize()` throws a `VLCException` listing the paths searched; `CodeBrix.Webcam` wraps that in a `WebcamException` whose message states the per-platform fix. Webcam *device enumeration* works without libvlc — only opening a capture session (and the playback APIs) requires it.
+If libvlc cannot be loaded, `Core.Initialize()` throws a `VLCException` listing the paths searched; `CodeBrix.Webcam` wraps that in a `WebcamException` whose message states the per-platform fix. Webcam *device enumeration* works without libvlc on every platform — only opening a capture session on Linux/macOS (and the playback APIs anywhere) requires it. One Windows-specific limitation of the Media Foundation engine: `WebcamVideoFormat.MjpegAvi` passthrough recording is not available there — use the default `Mp4H264` (hardware-accelerated where available).
 
 All of these packages support applications and assemblies that target Microsoft .NET version 10.0 and later.
 Microsoft .NET version 10.0 is a Long-Term Supported (LTS) version of .NET, and was released on Nov 11, 2025; and will be actively supported by Microsoft until Nov 14, 2028.
