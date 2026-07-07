@@ -1,14 +1,11 @@
 using System;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
-using CodeBrix.Platform.MediaPlayerCore;
 using CodeBrix.Webcam.Capture;
 using CodeBrix.Webcam.Devices;
 using CodeBrix.Webcam.Internal;
-using CodeBrix.Webcam.Internal.Darwin;
 
 namespace CodeBrix.Webcam;
 
@@ -31,27 +28,26 @@ public sealed class WebcamSession : IDisposable
     private enum RecordingMode
     {
         None = 0,
-        Direct,    // libvlc records the camera stream itself (sout duplicate)
+        Direct,    // the backend records the camera stream itself
         FramePath, // frames pass through managed code (overlay burn-in) into the encoder
     }
 
     private readonly IImagingMediaDevice _device;
     private readonly WebcamSessionOptions _options;
     private readonly string _audioDeviceId;
+    private readonly ICaptureBackend _backend;
 
     // _apiLock serializes the control surface (Start/Stop/recording changes/Dispose) and
-    // is the only context that touches the MediaPlayer lifecycle. _frameSync guards the
-    // state the frame callback reads, and is NEVER held across a player operation —
-    // player.Stop() waits for in-flight frame callbacks, which take _frameSync.
+    // is the only context that touches the backend's control surface. _frameSync guards
+    // the state the frame callback reads, and is NEVER held across a backend control
+    // operation — stopping the backend waits for in-flight frame callbacks, which take
+    // _frameSync.
     private readonly object _apiLock = new object();
     private readonly object _frameSync = new object();
 
     private readonly WebcamFrameEventArgs _frameArgs = new WebcamFrameEventArgs();
     private readonly ManualResetEventSlim _photoReady = new ManualResetEventSlim(false);
 
-    private MediaPlayer _player;
-    private Media _media;
-    private VideoFrameSink _sink;
     private volatile bool _running;
     private volatile bool _disposed;
     private bool _monitorAudio;
@@ -68,8 +64,8 @@ public sealed class WebcamSession : IDisposable
 
     private volatile RecordingMode _recordingMode;
     private WebcamRecordingOptions _recordingOptions;
-    private VideoFrameSource _frameSource;
-    private AudioSidecarRecorder _audioSidecar;
+    private IFramePathRecorder _framePathRecorder;
+    private IAudioSidecar _audioSidecar;
     private DateTime _recordingStartedUtc;
     private DateTime _firstRecordedFrameUtc;
     private bool _sawFirstRecordedFrame;
@@ -89,6 +85,8 @@ public sealed class WebcamSession : IDisposable
         _device = device ?? throw new ArgumentNullException(nameof(device));
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _audioDeviceId = CaptureMediaFactory.ResolveAudioDevice(device, options);
+        _backend = CaptureBackendFactory.Create(device, options, _audioDeviceId);
+        _backend.FrameReady += OnFrameReady;
     }
 
     /// <summary>The camera this session captures from.</summary>
@@ -108,16 +106,16 @@ public sealed class WebcamSession : IDisposable
 
     /// <summary>
     /// True when overlay burn-in on RECORDINGS is available on this machine (photos can
-    /// always burn in the overlay). Probes the media engine's in-memory frame input on
-    /// first call; the result is cached for the process lifetime.
+    /// always burn in the overlay). May probe the media engine's in-memory frame input
+    /// on first call; the result is cached for the process lifetime.
     /// </summary>
-    public bool IsOverlayRecordingSupported => WebcamEngine.SupportsFrameInput();
+    public bool IsOverlayRecordingSupported => _backend.SupportsFramePathRecording;
 
     /// <summary>Frame width in pixels once frames are flowing, else 0.</summary>
-    public uint FrameWidth => _sink?.Width ?? 0;
+    public uint FrameWidth => _backend.FrameWidth;
 
     /// <summary>Frame height in pixels once frames are flowing, else 0.</summary>
-    public uint FrameHeight => _sink?.Height ?? 0;
+    public uint FrameHeight => _backend.FrameHeight;
 
     /// <summary>
     /// Plays the captured microphone live through the default audio output ("monitoring").
@@ -130,11 +128,7 @@ public sealed class WebcamSession : IDisposable
         set
         {
             _monitorAudio = value;
-            var player = _player;
-            if (player != null)
-            {
-                player.Mute = !value;
-            }
+            _backend.SetAudioMonitoring(value, _monitorVolume);
         }
     }
 
@@ -145,11 +139,7 @@ public sealed class WebcamSession : IDisposable
         set
         {
             _monitorVolume = Math.Clamp(value, 0, 100);
-            var player = _player;
-            if (player != null)
-            {
-                player.Volume = _monitorVolume;
-            }
+            _backend.SetAudioMonitoring(_monitorAudio, _monitorVolume);
         }
     }
 
@@ -163,7 +153,7 @@ public sealed class WebcamSession : IDisposable
 
     /// <summary>Opens the camera and starts the live frame stream.</summary>
     /// <exception cref="WebcamException">The camera could not be opened, capture
-    /// permission was refused (macOS), or the native libvlc runtime is not installed —
+    /// permission was refused (macOS), or the native capture engine is not installed —
     /// the message states the per-platform fix.</exception>
     public void Start()
     {
@@ -175,25 +165,8 @@ public sealed class WebcamSession : IDisposable
                 return;
             }
 
-            if (OperatingSystem.IsMacOS())
-            {
-                // libvlc's macOS capture modules fail (rather than prompt) without TCC
-                // consent, so obtain it — prompting the user if needed — up front.
-                DarwinCaptureAuthorization.EnsureAccess(_audioDeviceId != null);
-            }
-
-            _media = CaptureMediaFactory.Build(_device, _options, _audioDeviceId, false, null);
-            _player = new MediaPlayer(_media);
-            _sink = new VideoFrameSink(_player);
-            _sink.FrameReady += OnFrameReady;
-            _player.Mute = !_monitorAudio;
-            _player.Volume = _monitorVolume;
-
-            if (!_player.Play())
-            {
-                CleanUpPlayer();
-                throw new WebcamException($"Could not start capturing from '{_device.FriendlyName}'.");
-            }
+            _backend.SetAudioMonitoring(_monitorAudio, _monitorVolume);
+            _backend.Start();
             _running = true;
         }
     }
@@ -212,8 +185,7 @@ public sealed class WebcamSession : IDisposable
                 StopRecordingUnderApiLock();
             }
             _running = false;
-            _player?.Stop();
-            CleanUpPlayer();
+            _backend.Stop();
         }
     }
 
@@ -307,11 +279,11 @@ public sealed class WebcamSession : IDisposable
 
     /// <summary>
     /// Starts recording. With <see cref="WebcamVideoFormat.Mp4H264"/> and no overlay
-    /// involvement, libvlc records the camera stream directly (in-file audio when the
-    /// session captures a microphone; the live preview restarts briefly). With an overlay
-    /// set — or <see cref="WebcamRecordingOptions.AllowLiveOverlay"/> — frames flow
-    /// through managed compositing into the encoder without interrupting the preview,
-    /// and captured audio arrives as a sidecar WAV file (see
+    /// involvement, the backend records the camera stream directly (in-file audio when
+    /// the session captures a microphone). With an overlay set — or
+    /// <see cref="WebcamRecordingOptions.AllowLiveOverlay"/> — frames flow through
+    /// managed compositing into the encoder without interrupting the preview, and
+    /// captured audio arrives as a sidecar WAV file (see
     /// <see cref="WebcamRecordingResult.AudioFilePath"/>).
     /// </summary>
     /// <param name="options">What, where, and how to record.</param>
@@ -345,7 +317,6 @@ public sealed class WebcamSession : IDisposable
             {
                 Directory.CreateDirectory(directory);
             }
-            var outputPath = QuoteForSout(options.OutputPath);
 
             bool overlayInvolved;
             lock (_frameSync)
@@ -361,22 +332,17 @@ public sealed class WebcamSession : IDisposable
                         "MJPEG passthrough records the camera's own bytes and cannot burn in overlays; " +
                         "use Mp4H264 for overlay recordings.");
                 }
-                StartDirectRecordingUnderApiLock(forceMjpeg: true,
-                    "#duplicate{dst=display,dst=standard{access=file,mux=avi,dst="
-                    + outputPath + "}}");
+                _backend.StartDirectRecording(options, forceMjpeg: true);
+                _recordingMode = RecordingMode.Direct;
             }
             else if (overlayInvolved)
             {
-                StartFramePathRecordingUnderApiLock(options, outputPath);
+                StartFramePathRecordingUnderApiLock(options);
             }
             else
             {
-                var audioPart = _audioDeviceId != null ? ",acodec=mp4a,ab=128" : string.Empty;
-                StartDirectRecordingUnderApiLock(forceMjpeg: false,
-                    "#duplicate{dst=display,dst=transcode{vcodec=h264,vb="
-                    + options.VideoBitrateKbps.ToString(CultureInfo.InvariantCulture)
-                    + ",venc=x264{tune=zerolatency}" + audioPart
-                    + "}:standard{access=file,mux=mp4,dst=" + outputPath + "}}");
+                _backend.StartDirectRecording(options, forceMjpeg: false);
+                _recordingMode = RecordingMode.Direct;
             }
 
             _recordingOptions = options;
@@ -423,10 +389,11 @@ public sealed class WebcamSession : IDisposable
                     }
                 }
                 _running = false;
-                _player?.Stop();
-                CleanUpPlayer();
+                _backend.Stop();
             }
             _disposed = true;
+            _backend.FrameReady -= OnFrameReady;
+            _backend.Dispose();
             lock (_frameSync)
             {
                 if (_compositeBuffer != IntPtr.Zero)
@@ -440,35 +407,10 @@ public sealed class WebcamSession : IDisposable
         _photoReady.Set(); // release any waiting CapturePhoto
     }
 
-    private void StartDirectRecordingUnderApiLock(bool forceMjpeg, string soutChain)
+    private void StartFramePathRecordingUnderApiLock(WebcamRecordingOptions options)
     {
-        // The direct pipeline records by restarting the SAME player on a media that
-        // duplicates the stream: one branch keeps feeding the frame sink (the "display"
-        // output), the other goes to disk. The preview blinks briefly during the restart.
-        _player.Stop();
-        var oldMedia = _media;
-        _media = CaptureMediaFactory.Build(_device, _options, _audioDeviceId, forceMjpeg, soutChain);
-        _player.Media = _media;
-        oldMedia?.Dispose();
-        _player.Mute = !_monitorAudio;
-        _player.Volume = _monitorVolume;
-        if (!_player.Play())
-        {
-            throw new WebcamException("Could not restart the camera with the recording pipeline.");
-        }
-        _recordingMode = RecordingMode.Direct;
-    }
+        _backend.EnsureFramePathRecordingSupported();
 
-    private void StartFramePathRecordingUnderApiLock(WebcamRecordingOptions options, string quotedOutputPath)
-    {
-        if (!WebcamEngine.SupportsFrameInput())
-        {
-            throw new WebcamException(
-                "Overlay recording is unavailable: this libvlc installation cannot accept " +
-                "in-memory video frames (the \"imem\" input plugin is missing). Plain recording " +
-                "and photo overlay burn-in still work. On Debian/Ubuntu, verify vlc-plugin-base " +
-                "is installed.");
-        }
         var width = FrameWidth;
         var height = FrameHeight;
         if (width == 0 || height == 0)
@@ -477,31 +419,18 @@ public sealed class WebcamSession : IDisposable
         }
 
         var fpsHint = _options.RequestedFrameRate > 0 ? (uint)Math.Round(_options.RequestedFrameRate) : 30u;
-        var source = new VideoFrameSource(WebcamEngine.Shared, width, height, fpsHint,
-            ":sout=#transcode{vcodec=h264,vb=" + options.VideoBitrateKbps.ToString(CultureInfo.InvariantCulture)
-            + ",venc=x264{tune=zerolatency}}:standard{access=file,mux=mp4,dst=" + quotedOutputPath + "}");
-        if (!source.Start())
+        var recorder = _backend.CreateFramePathRecorder(width, height, fpsHint, options);
+        if (!recorder.Start())
         {
-            source.Dispose();
+            recorder.Dispose();
             throw new WebcamException("Could not start the overlay recording encoder.");
         }
 
-        AudioSidecarRecorder sidecar = null;
-        if (_audioDeviceId != null)
-        {
-            sidecar = new AudioSidecarRecorder();
-            var wavPath = Path.ChangeExtension(options.OutputPath, ".wav");
-            if (!sidecar.Start(_audioDeviceId, wavPath))
-            {
-                Trace.WriteLine("CodeBrix.Webcam: sidecar audio capture failed to start; recording video only.");
-                sidecar.Dispose();
-                sidecar = null;
-            }
-        }
+        var sidecar = _backend.StartAudioSidecar(options.OutputPath);
 
         lock (_frameSync)
         {
-            _frameSource = source;
+            _framePathRecorder = recorder;
             _audioSidecar = sidecar;
             _recordingMode = RecordingMode.FramePath;
         }
@@ -516,40 +445,32 @@ public sealed class WebcamSession : IDisposable
         if (_recordingMode == RecordingMode.Direct)
         {
             _recordingMode = RecordingMode.None;
-            // Swap back to the plain preview media.
-            _player.Stop();
-            var oldMedia = _media;
-            _media = CaptureMediaFactory.Build(_device, _options, _audioDeviceId, false, null);
-            _player.Media = _media;
-            oldMedia?.Dispose();
-            _player.Mute = !_monitorAudio;
-            _player.Volume = _monitorVolume;
-            _player.Play();
+            _backend.StopDirectRecording();
             return new WebcamRecordingResult(options.OutputPath, null, null, duration, 0);
         }
 
         // Frame path: detach from the frame callback first, then drain and finalize.
-        VideoFrameSource source;
-        AudioSidecarRecorder sidecar;
+        IFramePathRecorder recorder;
+        IAudioSidecar sidecar;
         lock (_frameSync)
         {
-            source = _frameSource;
+            recorder = _framePathRecorder;
             sidecar = _audioSidecar;
-            _frameSource = null;
+            _framePathRecorder = null;
             _audioSidecar = null;
             _recordingMode = RecordingMode.None;
         }
 
         var frames = 0L;
-        if (source != null)
+        if (recorder != null)
         {
-            source.Complete();
-            if (!source.WaitForCompletion(TimeSpan.FromSeconds(30)))
+            recorder.Complete();
+            if (!recorder.WaitForCompletion(TimeSpan.FromSeconds(30)))
             {
                 Trace.WriteLine("CodeBrix.Webcam: the recording encoder did not finalize cleanly.");
             }
-            frames = source.FramesPushed;
-            source.Dispose();
+            frames = recorder.FramesPushed;
+            recorder.Dispose();
         }
 
         string audioPath = null;
@@ -567,7 +488,7 @@ public sealed class WebcamSession : IDisposable
         return new WebcamRecordingResult(options.OutputPath, audioPath, audioOffset, duration, frames);
     }
 
-    private void OnFrameReady(object sender, VideoFrameReadyEventArgs frame)
+    private void OnFrameReady(object sender, CaptureFrameEventArgs frame)
     {
         try
         {
@@ -591,14 +512,14 @@ public sealed class WebcamSession : IDisposable
 
                 var burned = composited != IntPtr.Zero ? composited : frame.Plane;
 
-                if (_recordingMode == RecordingMode.FramePath && _frameSource != null)
+                if (_recordingMode == RecordingMode.FramePath && _framePathRecorder != null)
                 {
                     if (!_sawFirstRecordedFrame)
                     {
                         _sawFirstRecordedFrame = true;
                         _firstRecordedFrameUtc = DateTime.UtcNow;
                     }
-                    _frameSource.PushFrame(burned, frame.PitchBytes);
+                    _framePathRecorder.PushFrame(burned, frame.PitchBytes);
                 }
 
                 if (_photoPending)
@@ -621,7 +542,7 @@ public sealed class WebcamSession : IDisposable
         }
         catch (Exception e)
         {
-            // An exception escaping into native libvlc code would crash the process.
+            // An exception escaping into native capture-engine code would crash the process.
             Trace.WriteLine($"CodeBrix.Webcam frame handling threw: {e}");
         }
     }
@@ -639,7 +560,7 @@ public sealed class WebcamSession : IDisposable
         }
     }
 
-    private void CopyPackedLocked(IntPtr plane, VideoFrameReadyEventArgs frame)
+    private void CopyPackedLocked(IntPtr plane, CaptureFrameEventArgs frame)
     {
         var packedRow = (int)(frame.Width * 4);
         var buffer = new byte[packedRow * frame.Height];
@@ -650,31 +571,6 @@ public sealed class WebcamSession : IDisposable
         _photoBuffer = buffer;
         _photoWidth = (int)frame.Width;
         _photoHeight = (int)frame.Height;
-    }
-
-    private void CleanUpPlayer()
-    {
-        if (_sink != null)
-        {
-            _sink.FrameReady -= OnFrameReady;
-            _sink.Dispose();
-            _sink = null;
-        }
-        _player?.Dispose();
-        _player = null;
-        _media?.Dispose();
-        _media = null;
-    }
-
-    private static string QuoteForSout(string path)
-    {
-        var fullPath = Path.GetFullPath(path);
-        if (fullPath.IndexOf('\'') >= 0)
-        {
-            throw new WebcamException(
-                "Recording paths containing a single-quote character (') are not supported.");
-        }
-        return "'" + fullPath + "'";
     }
 
     private void ThrowIfDisposed()

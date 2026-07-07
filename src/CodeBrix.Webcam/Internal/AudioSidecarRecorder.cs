@@ -8,15 +8,17 @@ namespace CodeBrix.Webcam.Internal;
 /// available) alongside a frame-path video recording. Runs its own small libvlc input
 /// so it has no timing entanglement with the video pipeline.
 /// </summary>
-internal sealed class AudioSidecarRecorder : IDisposable
+internal sealed class AudioSidecarRecorder : IAudioSidecar
 {
     private Media _media;
     private MediaPlayer _player;
     private bool _disposed;
 
-    internal string OutputPath { get; private set; }
+    /// <inheritdoc/>
+    public string OutputPath { get; private set; }
 
-    internal DateTime StartedAtUtc { get; private set; }
+    /// <inheritdoc/>
+    public DateTime StartedAtUtc { get; private set; }
 
     /// <summary>Starts capturing the given audio device to a WAV file.</summary>
     /// <returns>True if capture started; false if libvlc refused (missing device, etc.).</returns>
@@ -49,7 +51,7 @@ internal sealed class AudioSidecarRecorder : IDisposable
 
     /// <summary>Stops capture and finalizes the WAV file (the wav muxer writes its
     /// header on close, so the file is valid only after this).</summary>
-    internal void Stop()
+    public void Stop()
     {
         _player?.Stop();
     }
