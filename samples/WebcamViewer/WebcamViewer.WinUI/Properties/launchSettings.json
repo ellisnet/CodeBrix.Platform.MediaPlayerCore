@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "WebcamViewer.WinUI (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "WebcamViewer.WinUI (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

@@ -1,0 +1,55 @@
+<Page
+    x:Class="WebcamViewer.Views.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:WebcamViewer.ViewModels"
+    xmlns:video="using:WebcamViewer.Video"
+    FontFamily="{StaticResource OpenSansFont}"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Page.DataContext>
+        <vm:MainViewModel />
+    </Page.DataContext>
+
+    <Grid Padding="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12" Margin="0,0,0,8">
+            <TextBlock Text="Webcam Viewer" FontSize="24" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <ComboBox MinWidth="280" VerticalAlignment="Center"
+                      ItemsSource="{Binding Cameras}"
+                      SelectedItem="{Binding SelectedCamera, Mode=TwoWay}" />
+            <CheckBox Content="Monitor audio" VerticalAlignment="Center"
+                      IsChecked="{Binding IsAudioMonitorOn, Mode=TwoWay}"
+                      IsEnabled="{Binding IsMicAvailable}" />
+        </StackPanel>
+
+        <Border Grid.Row="1" BorderBrush="Gray" BorderThickness="1" Background="Black">
+            <video:VideoCanvas x:Name="VideoView" />
+        </Border>
+
+        <Grid Grid.Row="2" Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0" Text="Folder Path:" VerticalAlignment="Center" Margin="0,0,8,0" />
+            <TextBox Grid.Column="1" Text="{Binding FolderPath, Mode=TwoWay}"
+                     PlaceholderText="Where frame-photos get saved" VerticalAlignment="Center" />
+            <Button Grid.Column="2" Content="Browse…" Command="{Binding BrowseFolderCommand}"
+                    Margin="8,0,0,0" MinWidth="100" />
+            <Button Grid.Column="3" Content="Photo" Command="{Binding PhotoCommand}"
+                    Margin="8,0,0,0" MinWidth="100" Style="{ThemeResource AccentButtonStyle}" />
+        </Grid>
+
+        <TextBlock Grid.Row="3" Text="{Binding StatusText}" Margin="0,8,0,0" TextWrapping="Wrap" />
+    </Grid>
+</Page>

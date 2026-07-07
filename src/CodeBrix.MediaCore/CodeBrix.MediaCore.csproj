@@ -2,7 +2,20 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <AssemblyName>CodeBrix.Platform.MediaPlayerCore</AssemblyName>
+    <AssemblyName>CodeBrix.MediaCore</AssemblyName>
+    <!--
+        DELIBERATE MISMATCH — DO NOT "FIX".
+
+        The types in this project keep their original
+        CodeBrix.Platform.MediaPlayerCore namespaces (and sub-namespaces)
+        even though the assembly/package is named CodeBrix.MediaCore. They
+        were moved here verbatim from the CodeBrix.Platform.MediaPlayerCore
+        project so that existing consumers (the CodeBrix.Platform MediaPlayer
+        add-in) keep compiling with ZERO source changes. Renaming the
+        namespaces to CodeBrix.MediaCore.* would be a breaking change and is
+        not allowed. RootNamespace below matches the namespaces actually used
+        in the sources.
+      -->
     <RootNamespace>CodeBrix.Platform.MediaPlayerCore</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -11,10 +24,10 @@
   <!--
       IMPORTANT — DELIBERATE EXCEPTION TO THE NORMAL CODEBRIX VERSIONING SCHEME.
 
-      The MAJOR version of CodeBrix.Platform.MediaPlayerCore MUST match the
-      MAJOR version of the native libvlc library it wraps. This library is a
-      port of LibVLCSharp 3.9.7, which targets libvlc 3.x — therefore the
-      managed package's MAJOR is pinned at 3.
+      The MAJOR version of CodeBrix.MediaCore MUST match the MAJOR version of
+      the native libvlc library it wraps. This library is a port of
+      LibVLCSharp 3.9.7, which targets libvlc 3.x — therefore the managed
+      package's MAJOR is pinned at 3.
 
       At runtime, Core.EnsureVersionsMatch() (see Core/Core.cs) reads
       Assembly.GetExecutingAssembly().GetName().Version.Major and throws
@@ -23,17 +36,22 @@
       LibVLC instantiation throw.
 
       The normal CodeBrix standard of setting the Major version to 1 does not
-      apply to this library/package. Only bump MAJOR here when (and if) this 
-      library is re-ported from a future LibVLCSharp that targets a newer libvlc 
-      major — e.g. LibVLCSharp 4.x against libvlc 4.x, at which point bump to 4.0.x 
+      apply to this library/package. Only bump MAJOR here when (and if) this
+      library is re-ported from a future LibVLCSharp that targets a newer libvlc
+      major — e.g. LibVLCSharp 4.x against libvlc 4.x, at which point bump to 4.0.x
       and update the rationale in THIRD-PARTY-NOTICES.txt.
-      
-      Note that the next comment is the "standard" version explainer comment and 
+
+      ALL packages produced by this repo (CodeBrix.MediaCore,
+      CodeBrix.Platform.MediaPlayerCore, and eventually CodeBrix.Webcam) share
+      this same 3.x.y.z scheme and always build/ship together at (effectively)
+      the same version.
+
+      Note that the next comment is the "standard" version explainer comment and
       has not been modified, so it still talks about setting to the major version
       to 1, but this can be ignored for this library/package.
-      
-      Also note that the only change to the versioning <PropertyGroup> below - 
-      which takes it away from the "standard" CodeBrix XML is that the 
+
+      Also note that the only change to the versioning <PropertyGroup> below -
+      which takes it away from the "standard" CodeBrix XML is that the
       <BuildVersion> take has a "3." instead of a "1."
     -->
 
@@ -80,11 +98,11 @@
 
   <!-- NuGet package properties -->
   <PropertyGroup>
-    <PackageId>CodeBrix.Platform.MediaPlayerCore.LgplLicenseForever</PackageId>
-    <Product>CodeBrix.Platform.MediaPlayerCore</Product>
-    <Title>CodeBrix.Platform.MediaPlayerCore</Title>
+    <PackageId>CodeBrix.MediaCore.LgplLicenseForever</PackageId>
+    <Product>CodeBrix.MediaCore</Product>
+    <Title>CodeBrix.MediaCore</Title>
     <Authors>Jeremy Ellis</Authors>
-    <Description>A fully managed, cross-platform audio / video media-player library for .NET 10. A drop-in-compatible port of LibVLCSharp 3.9.7 — the official .NET wrapper around VideoLAN's LibVLC library — narrowed to the cross-platform managed core. The libvlc engine binding (LibVLC, Media, MediaPlayer, VideoFrameSink, etc.) ships in the CodeBrix.MediaCore.LgplLicenseForever dependency of this package; this package adds the MediaPlayerElement-style management layer and video-view interfaces for building playback UIs. All types keep their CodeBrix.Platform.MediaPlayerCore namespaces, so consumers need no source changes. Requires the native libvlc runtime to be installed or referenced via the official VideoLAN.LibVLC.* NuGet packages.</Description>
+    <Description>A fully managed, cross-platform media engine for .NET 10: the libvlc binding underneath the CodeBrix media libraries (LibVLC, Media, MediaPlayer, VideoFrameSink, discoverers, equalizer, dialogs). Ported from LibVLCSharp 3.9.7 — the official .NET wrapper around VideoLAN's LibVLC library — with types retaining their CodeBrix.Platform.MediaPlayerCore namespaces for drop-in compatibility. Requires the native libvlc runtime to be installed or referenced via the official VideoLAN.LibVLC.* NuGet packages.</Description>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageProjectUrl>https://github.com/ellisnet/CodeBrix.Platform.MediaPlayerCore</PackageProjectUrl>
     <RepositoryUrl>https://github.com/ellisnet/CodeBrix.Platform.MediaPlayerCore</RepositoryUrl>
@@ -95,15 +113,8 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <IsPackable>true</IsPackable>
-    <PackageTags>video;audio;media;player;libvlc;vlc;streaming;CodeBrix</PackageTags>
+    <PackageTags>video;audio;media;engine;player;webcam;libvlc;vlc;streaming;CodeBrix</PackageTags>
   </PropertyGroup>
-
-  <ItemGroup>
-    <!-- The libvlc engine binding moved to CodeBrix.MediaCore (2026-07-06);
-         at pack time this ProjectReference becomes a NuGet dependency on
-         CodeBrix.MediaCore.LgplLicenseForever at the same build version. -->
-    <ProjectReference Include="..\CodeBrix.MediaCore\CodeBrix.MediaCore.csproj" />
-  </ItemGroup>
 
   <ItemGroup>
     <None Include="..\..\icon-codebrix-128.png" Pack="true" PackagePath="" />

@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+
+    <!-- CodeBrix.Platform needs this define for its internal conditional compilation -->
+    <DefineConstants>$(DefineConstants);HAS_CODEBRIX;HAS_CODEBRIX_WINUI</DefineConstants>
+  </PropertyGroup>
+
+  <!-- Tell MSBuild to treat .xaml files as CodeBrix.Platform (Uno-style) XAML pages -->
+  <ItemGroup>
+    <Page Include="**\*.xaml" Exclude="bin\**\*.xaml;obj\**\*.xaml" />
+    <None Remove="**\*.xaml" />
+  </ItemGroup>
+
+  <!-- Shared UI files (linked from WebcamViewer.UI) -->
+  <Import Project="..\WebcamViewer.UI\WebcamViewer.UI.projitems" Label="Shared" />
+  <ItemGroup>
+    <ProjectReference Include="..\WebcamViewer.Core\WebcamViewer.Core.csproj" />
+  </ItemGroup>
+
+  <!--
+    Platform-specific package: Skia X11 backend for Linux desktops (also runs on Wayland via XWayland).
+    All other packages come from WebcamViewer.Core.
+  -->
+  <ItemGroup>
+    <PackageReference Include="CodeBrix.Platform.Runtime.Skia.X11.ApacheLicenseForever" Version="1.0.185.1199" />
+  </ItemGroup>
+</Project>

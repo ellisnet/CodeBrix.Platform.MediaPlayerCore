@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- SkiaSharp.Views.WPF ships net10.0-windows10.0.19041 assets, so the TFM must
+         carry (at least) that Windows platform version -->
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_").Replace(".Wpf", ""))</RootNamespace>
+    <!-- Lets the project compile (not run) on Linux/macOS build hosts -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Shared\Video\VideoCanvas.cs" Link="Video\VideoCanvas.cs" />
+    <Compile Include="..\Shared\Helpers\HostHelper.cs" Link="Helpers\HostHelper.cs" />
+    <Compile Include="..\Shared\ViewModels\MainViewModel.cs" Link="ViewModels\MainViewModel.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The webcam library this sample exists to demonstrate (built from this repo) -->
+    <ProjectReference Include="..\..\..\src\CodeBrix.Webcam\CodeBrix.Webcam.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CodeBrix.Platform.WPF.ApacheLicenseForever" Version="1.0.183.475" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
+    <PackageReference Include="SkiaSharp.Views.WPF" Version="4.148.0" />
+
+    <!-- PNG encoding for the frame-photo feature -->
+    <PackageReference Include="CodeBrix.Imaging.ApacheLicenseForever" Version="1.0.164.1087" />
+  </ItemGroup>
+
+  <!-- Native libvlc runtime for CodeBrix.Webcam: the VideoLAN package lays the
+       libvlc binaries + plugins into the output folder on Windows. -->
+  <ItemGroup>
+    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.23.1" />
+  </ItemGroup>
+</Project>

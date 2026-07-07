@@ -3,11 +3,15 @@
     <File Path="AGENT-README.txt" />
     <File Path="icon-codebrix-128.png" />
     <File Path="LICENSE" />
+    <File Path="MAC-PORTING-GUIDE.txt" />
     <File Path="README.md" />
     <File Path="THIRD-PARTY-NOTICES.txt" />
   </Folder>
   <Folder Name="/Tests/">
     <Project Path="tests/CodeBrix.Platform.MediaPlayerCore.Tests/CodeBrix.Platform.MediaPlayerCore.Tests.csproj" />
+    <Project Path="tests/CodeBrix.Webcam.Tests/CodeBrix.Webcam.Tests.csproj" />
   </Folder>
+  <Project Path="src/CodeBrix.MediaCore/CodeBrix.MediaCore.csproj" />
   <Project Path="src/CodeBrix.Platform.MediaPlayerCore/CodeBrix.Platform.MediaPlayerCore.csproj" />
+  <Project Path="src/CodeBrix.Webcam/CodeBrix.Webcam.csproj" />
 </Solution>

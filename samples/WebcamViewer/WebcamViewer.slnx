@@ -1,0 +1,20 @@
+<Solution>
+  <!-- WebcamViewer.slnx
+       The cross-platform solution: everything that builds with the plain .NET SDK
+       on Linux, macOS and Windows. The native (non-Skia) WinUI 3 and WPF heads
+       live in WebcamViewer.Windows.slnx. -->
+  <Folder Name="/Solution Items/">
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/CodeBrixPlatform/">
+    <Project Path="CodeBrixPlatform/WebcamViewer.UI/WebcamViewer.UI.shproj" />
+    <Project Path="CodeBrixPlatform/WebcamViewer.Core/WebcamViewer.Core.csproj" />
+    <Project Path="CodeBrixPlatform/WebcamViewer.Win32Skia/WebcamViewer.Win32Skia.csproj" />
+    <Project Path="CodeBrixPlatform/WebcamViewer.WinWpfSkia/WebcamViewer.WinWpfSkia.csproj" />
+    <Project Path="CodeBrixPlatform/WebcamViewer.LinuxX11/WebcamViewer.LinuxX11.csproj" />
+    <Project Path="CodeBrixPlatform/WebcamViewer.LinuxWayland/WebcamViewer.LinuxWayland.csproj" />
+    <Project Path="CodeBrixPlatform/WebcamViewer.LinuxFrameBuffer/WebcamViewer.LinuxFrameBuffer.csproj" />
+    <Project Path="CodeBrixPlatform/WebcamViewer.MacOS/WebcamViewer.MacOS.csproj" />
+  </Folder>
+  <Project Path="../../src/CodeBrix.Webcam/CodeBrix.Webcam.csproj" />
+</Solution>

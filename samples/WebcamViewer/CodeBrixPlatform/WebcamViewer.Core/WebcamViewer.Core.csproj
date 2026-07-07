@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+
+    <!-- Match the namespace used by the app code -->
+    <RootNamespace>WebcamViewer</RootNamespace>
+
+    <!-- CodeBrix.Platform needs this define for its internal conditional compilation;
+         HAS_CODEBRIXPLATFORM selects the SKXamlCanvas base for the shared VideoCanvas -->
+    <DefineConstants>$(DefineConstants);HAS_CODEBRIX;HAS_CODEBRIX_WINUI;HAS_CODEBRIXPLATFORM</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\Shared\Video\VideoCanvas.cs" Link="Video\VideoCanvas.cs" />
+    <Compile Include="..\..\Shared\Helpers\HostHelper.cs" Link="Helpers\HostHelper.cs" />
+    <Compile Include="..\..\Shared\ViewModels\MainViewModel.cs" Link="ViewModels\MainViewModel.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.9" />
+    <PackageReference Include="CodeBrix.Platform.ApacheLicenseForever" Version="1.0.185.1199" />
+
+    <!-- SKXamlCanvas - the SkiaSharp video surface hosted in CodeBrix.Platform XAML -->
+    <PackageReference Include="CodeBrix.Platform.SkiaSharp.Views.MitLicenseForever" Version="4.148.0" />
+
+    <!-- Bundled Open Sans font -->
+    <PackageReference Include="CodeBrix.Platform.Fonts.OpenSans.ApacheLicenseForever" Version="1.0.181.655" />
+
+    <!-- PNG encoding for the frame-photo feature -->
+    <PackageReference Include="CodeBrix.Imaging.ApacheLicenseForever" Version="1.0.164.1087" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The webcam library this sample exists to demonstrate (built from this repo) -->
+    <ProjectReference Include="..\..\..\..\src\CodeBrix.Webcam\CodeBrix.Webcam.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!--
+      The WPF-hosted head must target net10.0-windows (the runtime package flows a
+      Microsoft.WindowsDesktop.App.WPF FrameworkReference). Do NOT set <UseWPF> here -
+      that would make the WPF build targets grab the CodeBrix.Platform (Uno-style) XAML
+      Page items. EnableWindowsTargeting lets this head compile inside the cross-platform
+      solution on Linux and macOS build hosts.
+    -->
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+
+    <!-- CodeBrix.Platform needs this define for its internal conditional compilation -->
+    <DefineConstants>$(DefineConstants);HAS_CODEBRIX;HAS_CODEBRIX_WINUI</DefineConstants>
+  </PropertyGroup>
+
+  <!-- Tell MSBuild to treat .xaml files as CodeBrix.Platform (Uno-style) XAML pages -->
+  <ItemGroup>
+    <Page Include="**\*.xaml" Exclude="bin\**\*.xaml;obj\**\*.xaml" />
+    <None Remove="**\*.xaml" />
+  </ItemGroup>
+
+  <!-- Shared UI files (linked from WebcamViewer.UI) -->
+  <Import Project="..\WebcamViewer.UI\WebcamViewer.UI.projitems" Label="Shared" />
+  <ItemGroup>
+    <ProjectReference Include="..\WebcamViewer.Core\WebcamViewer.Core.csproj" />
+  </ItemGroup>
+
+  <!--
+    Platform-specific package: Skia backend hosted inside a WPF application context.
+    All other packages come from WebcamViewer.Core.
+  -->
+  <ItemGroup>
+    <PackageReference Include="CodeBrix.Platform.Runtime.Skia.Wpf.ApacheLicenseForever" Version="1.0.185.1199" />
+  </ItemGroup>
+  <!-- Native libvlc runtime for CodeBrix.Webcam: the VideoLAN package lays the
+       libvlc binaries + plugins into the output folder on Windows. -->
+  <ItemGroup>
+    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.23.1" />
+  </ItemGroup>
+</Project>

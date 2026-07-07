@@ -1,17 +1,39 @@
 THIRD-PARTY SOFTWARE NOTICES AND INFORMATION
 
-CodeBrix.Platform.MediaPlayerCore is a .NET 10 drop-in-compatible port of
-the LibVLCSharp library (version 3.9.7) originally authored by VideoLAN.
-The upstream code is licensed under the GNU Lesser General Public License,
-version 2.1 or later. CodeBrix.Platform.MediaPlayerCore continues to be
-distributed under the same LGPL-2.1-or-later terms.
+The CodeBrix.Platform.MediaPlayerCore repository is a .NET 10
+drop-in-compatible port of the LibVLCSharp library (version 3.9.7)
+originally authored by VideoLAN. The upstream code is licensed under the
+GNU Lesser General Public License, version 2.1 or later. The libraries
+built from this repository continue to be distributed under the same
+LGPL-2.1-or-later terms.
 
-CodeBrix.Platform.MediaPlayerCore incorporates the full managed source tree
-of LibVLCSharp 3.9.7 / src/LibVLCSharp/Shared/**/*.cs (the cross-platform
+This repository produces three NuGet packages, and these notices apply to
+all of them:
+
+    CodeBrix.MediaCore.LgplLicenseForever               (the libvlc engine
+                                                         binding)
+    CodeBrix.Platform.MediaPlayerCore.LgplLicenseForever (the
+                                                         MediaPlayerElement-
+                                                         style UI-support
+                                                         layer; depends on
+                                                         CodeBrix.MediaCore)
+    CodeBrix.Webcam.LgplLicenseForever                  (webcam capture:
+                                                         enumeration, preview
+                                                         frames, photos,
+                                                         recording, overlays;
+                                                         depends on
+                                                         CodeBrix.MediaCore)
+
+Together the first two packages incorporate the full managed source tree of
+LibVLCSharp 3.9.7 / src/LibVLCSharp/Shared/**/*.cs (the cross-platform
 core). Platform-specific source trees (Android, Apple, UWP, Windows-XAML,
-WinForms, WPF, Forms, GTK, MAUI, Uno, Avalonia, Eto) are NOT ported — this
-library is the net10.0 "core" that other platform-specific CodeBrix
-libraries may eventually wrap.
+WinForms, WPF, Forms, GTK, MAUI, Uno, Avalonia, Eto) are NOT ported — these
+libraries are the net10.0 "core" that other platform-specific CodeBrix
+libraries may eventually wrap. CodeBrix.Webcam contains NO ported
+LibVLCSharp source files — it is original CodeBrix code that consumes the
+CodeBrix.MediaCore engine and talks directly to operating-system camera
+APIs (V4L2 on Linux, DirectShow on Windows); it is distributed under the
+same LGPL-2.1-or-later terms as the rest of the repository.
 
 If you have any questions about any third-party code referenced here, or
 if you believe that any third-party code has been included in
@@ -27,17 +49,20 @@ https://github.com/ellisnet/CodeBrix.Platform.MediaPlayerCore/issues
    Copyright:  Copyright (C) VideoLAN and the LibVLCSharp authors
    License:    GNU Lesser General Public License, version 2.1 or later
 
-   CodeBrix.Platform.MediaPlayerCore is a fork of LibVLCSharp 3.9.7,
-   restricted to the cross-platform managed core (src/LibVLCSharp/Shared).
-   Upstream copyright and license headers are preserved verbatim in every
-   ported source file.
+   The CodeBrix.MediaCore and CodeBrix.Platform.MediaPlayerCore libraries
+   are a fork of LibVLCSharp 3.9.7, restricted to the cross-platform
+   managed core (src/LibVLCSharp/Shared). Upstream copyright and license
+   headers are preserved verbatim in every ported source file.
 
    The following categories of modification were applied during the port:
 
      - Namespaces renamed from LibVLCSharp.Shared.* (and sub-namespaces)
        to CodeBrix.Platform.MediaPlayerCore.* . Every ported file's
        namespace line carries a `//was previously: <upstream.namespace>;`
-       provenance comment.
+       provenance comment. (Types shipped in the CodeBrix.MediaCore
+       assembly ALSO use the CodeBrix.Platform.MediaPlayerCore.*
+       namespaces — the split into two packages did not change any
+       namespace.)
      - Target framework narrowed from a multi-TFM matrix to net10.0.
        Conditional-compile branches (`#if NETSTANDARD1_1`, `#if NET40`,
        `#if NETFRAMEWORK`, `#if MONO`, etc.) whose branch would never

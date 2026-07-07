@@ -2,19 +2,56 @@
 AGENT-README: CodeBrix.Platform.MediaPlayerCore
 A Comprehensive Guide for AI Coding Agents
 ================================================================================
-Last updated: 2026-04-20
+Last updated: 2026-07-06
 
 
 OVERVIEW
 --------
-CodeBrix.Platform.MediaPlayerCore is a fully managed, cross-platform audio /
-video media-player library for .NET 10. It is a drop-in-compatible port of
-the LibVLCSharp NuGet package, version 3.9.7 (the official .NET wrapper
-around VideoLAN's LibVLC library), restricted to the cross-platform managed
-core. The library wraps the native libvlc dynamic library via P/Invoke and
-exposes high-level, managed classes (LibVLC, Media, MediaPlayer,
-MediaDiscoverer, RendererDiscoverer, Equalizer, Dialog, and a
-MediaPlayerElement-style management layer).
+This repository is a fully managed, cross-platform audio / video media
+library family for .NET 10. It is a drop-in-compatible port of the
+LibVLCSharp NuGet package, version 3.9.7 (the official .NET wrapper around
+VideoLAN's LibVLC library), restricted to the cross-platform managed core.
+It produces THREE NuGet packages:
+
+  CodeBrix.MediaCore.LgplLicenseForever
+      The media ENGINE: the libvlc P/Invoke binding — LibVLC, Media,
+      MediaPlayer, VideoFrameSink, VideoFrameSource, MediaDiscoverer,
+      RendererDiscoverer, Equalizer, Dialog, events, structures, marshalling
+      helpers, and the Core native-library loader. No managed NuGet
+      dependencies.
+      Project: src/CodeBrix.MediaCore/
+
+  CodeBrix.Platform.MediaPlayerCore.LgplLicenseForever
+      The MediaPlayerElement-style management layer and the IVideoView /
+      IVideoControl interfaces for building playback UIs. Depends on
+      CodeBrix.MediaCore.LgplLicenseForever at the same version.
+      Project: src/CodeBrix.Platform.MediaPlayerCore/
+
+  CodeBrix.Webcam.LgplLicenseForever
+      Webcam capture (ORIGINAL CodeBrix code, not ported): rich async device
+      enumeration (WebcamDevices.GetImagingMediaDeviceListAsync →
+      IImagingMediaDevice with the full format×resolution×framerate matrix,
+      camera controls, hardware ids, paired microphone), WebcamSession (live
+      BGRA FrameReceived frames, CapturePhoto, StartRecording/StopRecording
+      to MP4/H.264 or MJPEG-passthrough AVI, SetOverlay burn-in). Depends on
+      CodeBrix.MediaCore.LgplLicenseForever at the same version.
+      Project: src/CodeBrix.Webcam/
+
+CRITICAL NAMESPACE RULE — DO NOT "FIX":
+All types in the first two packages keep the original
+CodeBrix.Platform.MediaPlayerCore namespaces, including every type that ships
+in the CodeBrix.MediaCore assembly. The package-name/namespace mismatch is
+deliberate: it lets existing consumers (notably the CodeBrix.Platform
+MediaPlayer add-in) keep compiling with zero source changes. Never rename
+these namespaces to CodeBrix.MediaCore.* — that would be a breaking change.
+
+CRITICAL NO-LEAK RULE FOR CodeBrix.Webcam — DO NOT "SIMPLIFY":
+CodeBrix.Webcam's public API surface must NEVER expose a
+CodeBrix.Platform.MediaPlayerCore.* type — no parameter, return, property,
+event, base type, interface, or generic argument. Consumers use only
+CodeBrix.Webcam.* types; the engine is an internal implementation detail.
+The test PublicApiLeakTests (tests/CodeBrix.Webcam.Tests) enforces this by
+reflection — if it fails, fix the API, never the test.
 
 Upstream LibVLCSharp ships a large multi-TFM matrix including platform-
 specific views (Android AWindow, Apple UIKit, UWP/WinUI XAML, WPF, WinForms,
@@ -25,20 +62,26 @@ introduced in separate CodeBrix.Platform.* libraries.
 
 INSTALLATION
 ------------
-NuGet Package: CodeBrix.Platform.MediaPlayerCore.LgplLicenseForever
 Target framework: .NET 10.0 or higher
 
-To add to a .NET 10+ project:
+For the media engine only (playback, frame capture, discovery — most apps):
+
+    dotnet add package CodeBrix.MediaCore.LgplLicenseForever
+
+For the MediaPlayerElement-style management layer (pulls in the engine
+automatically as a dependency):
 
     dotnet add package CodeBrix.Platform.MediaPlayerCore.LgplLicenseForever
 
-Or in a .csproj file:
+For webcam capture (device enumeration, live preview frames, photos,
+recording, overlay burn-in — pulls in the engine automatically):
 
-    <PackageReference Include="CodeBrix.Platform.MediaPlayerCore.LgplLicenseForever" />
+    dotnet add package CodeBrix.Webcam.LgplLicenseForever
 
-IMPORTANT: The package name is "CodeBrix.Platform.MediaPlayerCore.LgplLicenseForever"
-(not "CodeBrix.Platform.MediaPlayerCore"). Always use the full package name when
-installing.
+IMPORTANT: The package names carry the ".LgplLicenseForever" suffix (e.g.
+"CodeBrix.MediaCore.LgplLicenseForever", not "CodeBrix.MediaCore"). Always
+use the full package name when installing. All packages from this repo
+always publish at the same version; never mix versions.
 
 The library depends on the native libvlc runtime. On Windows install
 VideoLAN.LibVLC.Windows via NuGet; on Linux install libvlc via the system
@@ -54,19 +97,25 @@ constructing any LibVLC instance to ensure the native library is loaded.
 
 KEY NAMESPACE
 -------------
-All managed types live under:
+All managed types — in BOTH packages/assemblies — live under:
 
     using CodeBrix.Platform.MediaPlayerCore;
 
-Sub-namespaces:
+Sub-namespaces (assembly that ships them in parentheses):
 
-    CodeBrix.Platform.MediaPlayerCore.Core             (native-library loader)
-    CodeBrix.Platform.MediaPlayerCore.Events           (event args / managers)
-    CodeBrix.Platform.MediaPlayerCore.Helpers          (marshalling helpers)
+    CodeBrix.Platform.MediaPlayerCore.Core             (native-library loader;
+                                                        CodeBrix.MediaCore)
+    CodeBrix.Platform.MediaPlayerCore.Events           (event args / managers;
+                                                        CodeBrix.MediaCore)
+    CodeBrix.Platform.MediaPlayerCore.Helpers          (marshalling helpers;
+                                                        CodeBrix.MediaCore)
     CodeBrix.Platform.MediaPlayerCore.MediaPlayerElement  (UI-agnostic
-                                                         management layer)
+                                                         management layer;
+                                                         CodeBrix.Platform.
+                                                         MediaPlayerCore)
     CodeBrix.Platform.MediaPlayerCore.Structures       (native DTOs /
-                                                         descriptions)
+                                                        descriptions;
+                                                        CodeBrix.MediaCore)
 
 
 CORE API REFERENCE
@@ -118,8 +167,8 @@ Main entry point (in order of typical use):
     plugin set (`sudo apt install libvlc5 vlc-plugin-base` on Debian/Ubuntu).
 
   MediaDiscoverer / RendererDiscoverer / Equalizer / Dialog
-    See the source files under src/CodeBrix.Platform.MediaPlayerCore/ for
-    exact signatures. API parity with LibVLCSharp 3.9.7 is the target.
+    See the source files under src/CodeBrix.MediaCore/ for exact
+    signatures. API parity with LibVLCSharp 3.9.7 is the target.
 
 
 CODING CONVENTIONS (CodeBrix family)
@@ -157,20 +206,17 @@ every PR to this repo.
 
 ARCHITECTURE
 ------------
-The project's managed code mirrors the sub-folder layout of upstream
-LibVLCSharp 3.9.7 / src/LibVLCSharp/Shared/, with namespaces adapted to
-the CodeBrix family:
+The managed code mirrors the sub-folder layout of upstream LibVLCSharp
+3.9.7 / src/LibVLCSharp/Shared/, with namespaces adapted to the CodeBrix
+family, split across two packable projects (split performed 2026-07-06;
+every file kept its namespace and content verbatim):
 
-    src/CodeBrix.Platform.MediaPlayerCore/
+    src/CodeBrix.MediaCore/                    == the ENGINE package ==
         Core/                       -- libvlc native loader (desktop only)
         Events/                     -- MediaEventManager, MediaPlayerEventManager,
                                        MediaListEventManager, RendererDiscovererEventManager,
                                        EventManager base + strongly-typed event args
         Helpers/                    -- MarshalExtensions, MarshalUtils, PlatformHelper
-        MediaPlayerElement/         -- UI-agnostic managers for AspectRatio,
-                                       AudioTracks, AutoHide, BufferingProgress,
-                                       CastRenderers, DeviceAwakening, MediaPosition,
-                                       SeekBar, State, SubtitlesTracks, Volume, etc.
         Structures/                 -- native DTOs: AudioOutputDescription,
                                        AudioOutputDevice, ChapterDescription,
                                        MediaDiscovererDescription, MediaSlave,
@@ -182,8 +228,6 @@ the CodeBrix family:
         Internal.cs                 -- Internal base class for native-ref wrappers
         InternalsVisibleTo.cs       -- InternalsVisibleTo declarations for the
                                        test assembly
-        IVideoControl.cs            -- video-control interface
-        IVideoView.cs               -- video-view interface
         LibVLC.cs                   -- main libvlc handle
         LibVLCEvents.cs             -- native event structs / enums
         MediaConfiguration.cs       -- parse options
@@ -199,6 +243,42 @@ the CodeBrix family:
                                        per frame; windowing-system-agnostic
                                        (event args live in Events/)
         VLCException.cs             -- domain exception
+
+    src/CodeBrix.Platform.MediaPlayerCore/     == the UI-layer package ==
+                                       (ProjectReference -> CodeBrix.MediaCore)
+        MediaPlayerElement/         -- UI-agnostic managers for AspectRatio,
+                                       AudioTracks, AutoHide, BufferingProgress,
+                                       CastRenderers, DeviceAwakening, MediaPosition,
+                                       SeekBar, State, SubtitlesTracks, Volume, etc.
+                                       (FontAwesomeIcons.cs lives here too)
+        InternalsVisibleTo.cs       -- InternalsVisibleTo declarations for the
+                                       test assembly
+        IVideoControl.cs            -- video-control interface
+        IVideoView.cs               -- video-view interface
+
+    src/CodeBrix.Webcam/                       == the webcam package ==
+                                       (ProjectReference -> CodeBrix.MediaCore;
+                                        namespaces: CodeBrix.Webcam[.Devices/
+                                        .Capture]; engine types NEVER public)
+        WebcamDevices.cs            -- async device-list entry point
+        WebcamSession.cs            -- preview / photos / recording / overlay
+        WebcamSessionOptions.cs     -- mode, audio, preview-composite options
+        AudioCaptureMode.cs         -- Off | Auto | SpecificDevice
+        WebcamException.cs          -- webcam-specific failures
+        Devices/                    -- IImagingMediaDevice + capability matrix,
+                                       controls (IImagingDeviceControl), hardware
+                                       info, paired-microphone record
+        Capture/                    -- WebcamFrameEventArgs (BGRA preview),
+                                       WebcamPhoto (packed BGRA), WebcamOverlay
+                                       (straight-alpha BGRA burn-in),
+                                       WebcamVideoFormat, WebcamRecordingOptions,
+                                       WebcamRecordingResult
+        Internal/                   -- engine glue (WebcamEngine, capture Media
+                                       factory, overlay compositor, sidecar WAV
+                                       recorder) and per-OS providers:
+                                       Linux/ (V4L2 via libc ioctls), Windows/
+                                       (DirectShow COM), Darwin/ (stub — see
+                                       MAC-PORTING-GUIDE.txt)
 
 
 TESTING
@@ -223,8 +303,10 @@ upstream LibVLCSharp attribution and source-availability statement.
 
 QUICK REFERENCE
 ---------------
-Install:         dotnet add package CodeBrix.Platform.MediaPlayerCore.LgplLicenseForever
-Namespace:       using CodeBrix.Platform.MediaPlayerCore;
+Install engine:  dotnet add package CodeBrix.MediaCore.LgplLicenseForever
+Install UI layer: dotnet add package CodeBrix.Platform.MediaPlayerCore.LgplLicenseForever
+                 (depends on, and pulls in, the engine package)
+Namespace:       using CodeBrix.Platform.MediaPlayerCore;   (BOTH packages)
 Initialize:      Core.Initialize();
 Main handle:     var lib = new LibVLC();
 Play a file:     new MediaPlayer(new Media(lib, new Uri(...))).Play();

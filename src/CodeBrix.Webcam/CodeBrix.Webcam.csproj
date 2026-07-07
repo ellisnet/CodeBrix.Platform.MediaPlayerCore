@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <AssemblyName>CodeBrix.Platform.MediaPlayerCore</AssemblyName>
-    <RootNamespace>CodeBrix.Platform.MediaPlayerCore</RootNamespace>
+    <AssemblyName>CodeBrix.Webcam</AssemblyName>
+    <RootNamespace>CodeBrix.Webcam</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
@@ -11,30 +11,19 @@
   <!--
       IMPORTANT — DELIBERATE EXCEPTION TO THE NORMAL CODEBRIX VERSIONING SCHEME.
 
-      The MAJOR version of CodeBrix.Platform.MediaPlayerCore MUST match the
-      MAJOR version of the native libvlc library it wraps. This library is a
-      port of LibVLCSharp 3.9.7, which targets libvlc 3.x — therefore the
-      managed package's MAJOR is pinned at 3.
+      ALL packages produced by this repo (CodeBrix.MediaCore,
+      CodeBrix.Platform.MediaPlayerCore, and CodeBrix.Webcam) share the same
+      3.x.y.z scheme: the MAJOR version is pinned to the major version of the
+      native libvlc library that CodeBrix.MediaCore wraps (currently 3), and
+      all packages always build and ship together at (effectively) the same
+      version. See the versioning comments in CodeBrix.MediaCore.csproj for
+      the full rationale (including the Core.EnsureVersionsMatch() runtime
+      guard). The normal CodeBrix standard of setting the Major version to 1
+      does not apply here.
 
-      At runtime, Core.EnsureVersionsMatch() (see Core/Core.cs) reads
-      Assembly.GetExecutingAssembly().GetName().Version.Major and throws
-      VLCException if it does not equal the native libvlc major version.
-      Bumping MAJOR to anything other than libvlc's major will make every
-      LibVLC instantiation throw.
-
-      The normal CodeBrix standard of setting the Major version to 1 does not
-      apply to this library/package. Only bump MAJOR here when (and if) this 
-      library is re-ported from a future LibVLCSharp that targets a newer libvlc 
-      major — e.g. LibVLCSharp 4.x against libvlc 4.x, at which point bump to 4.0.x 
-      and update the rationale in THIRD-PARTY-NOTICES.txt.
-      
-      Note that the next comment is the "standard" version explainer comment and 
+      Note that the next comment is the "standard" version explainer comment and
       has not been modified, so it still talks about setting to the major version
       to 1, but this can be ignored for this library/package.
-      
-      Also note that the only change to the versioning <PropertyGroup> below - 
-      which takes it away from the "standard" CodeBrix XML is that the 
-      <BuildVersion> take has a "3." instead of a "1."
     -->
 
   <!--
@@ -80,28 +69,25 @@
 
   <!-- NuGet package properties -->
   <PropertyGroup>
-    <PackageId>CodeBrix.Platform.MediaPlayerCore.LgplLicenseForever</PackageId>
-    <Product>CodeBrix.Platform.MediaPlayerCore</Product>
-    <Title>CodeBrix.Platform.MediaPlayerCore</Title>
+    <PackageId>CodeBrix.Webcam.LgplLicenseForever</PackageId>
+    <Product>CodeBrix.Webcam</Product>
+    <Title>CodeBrix.Webcam</Title>
     <Authors>Jeremy Ellis</Authors>
-    <Description>A fully managed, cross-platform audio / video media-player library for .NET 10. A drop-in-compatible port of LibVLCSharp 3.9.7 — the official .NET wrapper around VideoLAN's LibVLC library — narrowed to the cross-platform managed core. The libvlc engine binding (LibVLC, Media, MediaPlayer, VideoFrameSink, etc.) ships in the CodeBrix.MediaCore.LgplLicenseForever dependency of this package; this package adds the MediaPlayerElement-style management layer and video-view interfaces for building playback UIs. All types keep their CodeBrix.Platform.MediaPlayerCore namespaces, so consumers need no source changes. Requires the native libvlc runtime to be installed or referenced via the official VideoLAN.LibVLC.* NuGet packages.</Description>
+    <Description>A cross-platform webcam capture library for .NET 10: rich async device enumeration (supported resolutions, frame rates, pixel formats, and camera controls), live BGRA frame streaming for on-screen preview in any UI stack, frame-photo capture, video recording to MP4/H.264 or low-CPU MJPEG passthrough, and live-updatable transparent overlay burn-in. Built on the CodeBrix.MediaCore libvlc engine; consumers use only CodeBrix.Webcam.* types. Requires the native libvlc runtime to be installed or referenced via the official VideoLAN.LibVLC.* NuGet packages.</Description>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageProjectUrl>https://github.com/ellisnet/CodeBrix.Platform.MediaPlayerCore</PackageProjectUrl>
     <RepositoryUrl>https://github.com/ellisnet/CodeBrix.Platform.MediaPlayerCore</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageIcon>icon-codebrix-128.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <Copyright>Copyright (C) VideoLAN and the LibVLCSharp authors. Copyright (c) 2026 Jeremy Ellis and contributors.</Copyright>
+    <Copyright>Copyright (c) 2026 Jeremy Ellis and contributors.</Copyright>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <IsPackable>true</IsPackable>
-    <PackageTags>video;audio;media;player;libvlc;vlc;streaming;CodeBrix</PackageTags>
+    <PackageTags>webcam;camera;capture;video;photo;frames;recording;overlay;v4l2;dshow;libvlc;CodeBrix</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- The libvlc engine binding moved to CodeBrix.MediaCore (2026-07-06);
-         at pack time this ProjectReference becomes a NuGet dependency on
-         CodeBrix.MediaCore.LgplLicenseForever at the same build version. -->
     <ProjectReference Include="..\CodeBrix.MediaCore\CodeBrix.MediaCore.csproj" />
   </ItemGroup>
 
