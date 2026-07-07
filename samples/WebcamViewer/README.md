@@ -38,3 +38,19 @@ Solutions:
 The native `libvlc` runtime must be present (`sudo apt install libvlc5 vlc-plugin-base`
 on Debian/Ubuntu; the `VideoLAN.LibVLC.Windows` NuGet package is referenced
 automatically on Windows builds via CodeBrix.Webcam's requirements — see the repo README).
+
+macOS notes (`WebcamViewer.MacOS`):
+
+- The VLC media player application (`VLC.app`) must be installed: download it from
+  [videolan.org/vlc](https://www.videolan.org/vlc/) and drag it into
+  `/Applications` — the CodeBrix.MediaCore loader falls back to VLC.app's libvlc (and
+  points it at the bundle's plugins) automatically. The `VideoLAN.LibVLC.Mac` NuGet
+  package ships x64-only binaries, so installing VLC is the practical route on Apple
+  Silicon.
+- Camera permission: the first `WebcamSession.Start()` asks macOS for camera consent
+  (and microphone consent when audio monitoring is used) and the system prompt
+  appears. Run unbundled (`dotnet run`), the consent attaches to the hosting terminal
+  application. If you package the head as a proper `.app` bundle, its `Info.plist`
+  MUST declare `NSCameraUsageDescription` (and `NSMicrophoneUsageDescription`) —
+  macOS refuses camera access to a bundled app without them. If consent was denied
+  once, re-enable it under System Settings > Privacy & Security > Camera.

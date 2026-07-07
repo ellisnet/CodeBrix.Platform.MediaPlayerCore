@@ -23,6 +23,18 @@ internal static class Constants
     internal const string MacLibraryExtension = ".dylib";
     internal const string Lib = "lib";
     internal const string LibVLC = "libvlc";
+
+    /// <summary>
+    /// CodeBrix addition: the library directory inside a standard VLC.app install —
+    /// the documented no-bundling way to provide libvlc on macOS.
+    /// </summary>
+    internal const string MacVlcAppLibraryDirectory = "/Applications/VLC.app/Contents/MacOS/lib";
+
+    /// <summary>
+    /// CodeBrix addition: the plugin directory inside a standard VLC.app install; libvlc
+    /// needs VLC_PLUGIN_PATH pointed here when loaded out of the app bundle.
+    /// </summary>
+    internal const string MacVlcAppPluginsDirectory = "/Applications/VLC.app/Contents/MacOS/plugins";
 }
 
 internal static class ArchitectureNames
@@ -31,6 +43,7 @@ internal static class ArchitectureNames
     internal const string Win64 = "win-x64";
     internal const string Win86 = "win-x86";
     internal const string MacOS64 = "osx-x64";
+    internal const string MacOSArm64 = "osx-arm64";
 }
 
 [Flags]

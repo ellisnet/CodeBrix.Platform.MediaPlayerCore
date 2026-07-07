@@ -84,7 +84,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <IsPackable>true</IsPackable>
-    <PackageTags>webcam;camera;capture;video;photo;frames;recording;overlay;v4l2;dshow;libvlc;CodeBrix</PackageTags>
+    <PackageTags>webcam;camera;capture;video;photo;frames;recording;overlay;v4l2;dshow;avfoundation;libvlc;CodeBrix</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

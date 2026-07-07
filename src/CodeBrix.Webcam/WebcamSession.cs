@@ -8,6 +8,7 @@ using CodeBrix.Platform.MediaPlayerCore;
 using CodeBrix.Webcam.Capture;
 using CodeBrix.Webcam.Devices;
 using CodeBrix.Webcam.Internal;
+using CodeBrix.Webcam.Internal.Darwin;
 
 namespace CodeBrix.Webcam;
 
@@ -161,7 +162,9 @@ public sealed class WebcamSession : IDisposable
     public event EventHandler<WebcamFrameEventArgs> FrameReceived;
 
     /// <summary>Opens the camera and starts the live frame stream.</summary>
-    /// <exception cref="WebcamException">The camera could not be opened.</exception>
+    /// <exception cref="WebcamException">The camera could not be opened, capture
+    /// permission was refused (macOS), or the native libvlc runtime is not installed —
+    /// the message states the per-platform fix.</exception>
     public void Start()
     {
         lock (_apiLock)
@@ -170,6 +173,13 @@ public sealed class WebcamSession : IDisposable
             if (_running)
             {
                 return;
+            }
+
+            if (OperatingSystem.IsMacOS())
+            {
+                // libvlc's macOS capture modules fail (rather than prompt) without TCC
+                // consent, so obtain it — prompting the user if needed — up front.
+                DarwinCaptureAuthorization.EnsureAccess(_audioDeviceId != null);
             }
 
             _media = CaptureMediaFactory.Build(_device, _options, _audioDeviceId, false, null);

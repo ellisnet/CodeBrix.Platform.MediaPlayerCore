@@ -23,8 +23,8 @@ public static class WebcamDevices
     /// calling thread — call from UI code without worry.
     /// </summary>
     /// <returns>The connected devices; empty when none are present.</returns>
-    /// <exception cref="PlatformNotSupportedException">On macOS, where enumeration is
-    /// not implemented yet (see MAC-PORTING-GUIDE.txt in the repository).</exception>
+    /// <exception cref="PlatformNotSupportedException">On operating systems other than
+    /// Windows, Linux, and macOS.</exception>
     public static Task<IReadOnlyList<IImagingMediaDevice>> GetImagingMediaDeviceListAsync()
         => Task.Run<IReadOnlyList<IImagingMediaDevice>>(() =>
         {
@@ -36,6 +36,11 @@ public static class WebcamDevices
             {
                 return V4l2DeviceProvider.GetDevices();
             }
-            return DarwinDeviceProvider.GetDevices();
+            if (OperatingSystem.IsMacOS())
+            {
+                return DarwinDeviceProvider.GetDevices();
+            }
+            throw new PlatformNotSupportedException(
+                "CodeBrix.Webcam device enumeration supports Windows, Linux, and macOS.");
         });
 }

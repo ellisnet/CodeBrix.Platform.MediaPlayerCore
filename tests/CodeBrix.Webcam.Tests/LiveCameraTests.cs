@@ -28,7 +28,12 @@ public class LiveCameraTests
         var devices = await WebcamDevices.GetImagingMediaDeviceListAsync();
         devices.Count.Should().BeGreaterThan(0);
         devices[0].Capabilities.Count.Should().BeGreaterThan(0);
-        devices[0].Controls.Count.Should().BeGreaterThan(0);
+        if (!OperatingSystem.IsMacOS())
+        {
+            // AVFoundation exposes no UVC processing-amp controls, so on macOS a camera
+            // may legitimately enumerate with an empty controls list.
+            devices[0].Controls.Count.Should().BeGreaterThan(0);
+        }
     }
 
     [Fact(Skip = SkipReason, SkipUnless = nameof(CanRunCameraTests), SkipType = typeof(LiveCameraTests))]

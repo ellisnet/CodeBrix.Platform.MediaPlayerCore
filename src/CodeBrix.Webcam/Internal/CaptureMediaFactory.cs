@@ -67,9 +67,13 @@ internal static class CaptureMediaFactory
         }
         else
         {
-            // macOS: the avcapture input is expected to work once enumeration exists;
-            // see MAC-PORTING-GUIDE.txt.
+            // macOS: avcapture accepts the AVCaptureDevice uniqueID and negotiates the
+            // native format itself — it has no size/fps/chroma options to pass.
             mrl = "avcapture://" + device.Id;
+            if (audioDeviceId != null)
+            {
+                mediaOptions.Add(":input-slave=qtsound://" + audioDeviceId);
+            }
         }
 
         mediaOptions.Add(":live-caching=" + Math.Max(0, options.LiveCachingMs));

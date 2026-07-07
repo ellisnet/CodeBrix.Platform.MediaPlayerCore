@@ -23,7 +23,9 @@ internal sealed class AudioSidecarRecorder : IDisposable
     internal bool Start(string audioDeviceId, string outputPath)
     {
         OutputPath = outputPath;
-        string mrl = OperatingSystem.IsWindows() ? "dshow://" : "alsa://" + audioDeviceId;
+        string mrl = OperatingSystem.IsWindows() ? "dshow://"
+            : OperatingSystem.IsMacOS() ? "qtsound://" + audioDeviceId
+            : "alsa://" + audioDeviceId;
 
         var options = OperatingSystem.IsWindows()
             ? new[]

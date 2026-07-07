@@ -28,6 +28,15 @@ public static partial class Core
 
         [DllImport(Constants.LibSystem, EntryPoint = "dlopen")]
         internal static extern IntPtr Dlopen(string libraryPath, int mode = 1);
+
+        // CodeBrix addition: native env access for the VLC.app fallback. On Unix,
+        // Environment.SetEnvironmentVariable only updates the managed copy — libvlc's
+        // native getenv would never see it, so VLC_PLUGIN_PATH must be set via setenv.
+        [DllImport(Constants.LibSystem, EntryPoint = "setenv")]
+        internal static extern int SetEnv(string name, string value, int overwrite);
+
+        [DllImport(Constants.LibSystem, EntryPoint = "getenv")]
+        internal static extern IntPtr GetEnv(string name);
     }
 
     /// <summary>
@@ -65,7 +74,12 @@ public static partial class Core
 
         if (PlatformHelper.IsMac)
         {
-            arch = Path.Combine(ArchitectureNames.MacOS64, Constants.Lib);
+            // CodeBrix addition: pick the matching per-architecture folder on Apple
+            // Silicon (the upstream code predates arm64 Macs and always chose osx-x64).
+            var macArch = RuntimeInformation.ProcessArchitecture == Architecture.Arm64
+                ? ArchitectureNames.MacOSArm64
+                : ArchitectureNames.MacOS64;
+            arch = Path.Combine(macArch, Constants.Lib);
         }
 
         else if (PlatformHelper.IsWindows)
@@ -139,12 +153,37 @@ public static partial class Core
                 Constants.Lib), $"{Constants.LibVLC}{LibraryExtension}");
             var libvlccorePath4 = LibVLCCorePath(Path.Combine(Path.GetDirectoryName(libvlcAssemblyLocation)!, Constants.Lib));
             paths.Add((libvlccorePath4, libvlcPath4));
+
+            // CodeBrix addition: fall back to a standard VLC.app install — the
+            // documented no-bundling way to provide libvlc on macOS (and currently the
+            // only arm64 option, as the VideoLAN.LibVLC.Mac package ships x64 only).
+            // Application-bundled libraries above always win over the system VLC.app.
+            var libvlccorePath5 = LibVLCCorePath(Constants.MacVlcAppLibraryDirectory);
+            var libvlcPath5 = LibVLCPath(Constants.MacVlcAppLibraryDirectory);
+            paths.Add((libvlccorePath5, libvlcPath5));
         }
 
         return paths;
     }
 
+    // CodeBrix addition: serializes concurrent Initialize() calls — the handle fields
+    // are shared statics, and parallel loads could transiently reset one another's
+    // results through the out parameters, failing one caller spuriously.
+    static readonly object LoadLock = new object();
+
     static void LoadLibVLC(string? libvlcDirectoryPath = null)
+    {
+        lock (LoadLock)
+        {
+            if (LibVLCLoaded)
+            {
+                return;
+            }
+            LoadLibVLCUnderLock(libvlcDirectoryPath);
+        }
+    }
+
+    static void LoadLibVLCUnderLock(string? libvlcDirectoryPath)
     {
         // full path to directory location of libvlc and libvlccore has been provided
         if (!string.IsNullOrEmpty(libvlcDirectoryPath))
@@ -172,7 +211,10 @@ public static partial class Core
             LoadNativeLibrary(libvlccore, out LibvlccoreHandle);
             var loadResult = LoadNativeLibrary(libvlc, out LibvlcHandle);
             if (loadResult)
+            {
+                ConfigureVlcAppPluginPath(libvlc);
                 break;
+            }
         }
 
         if (!LibVLCLoaded)
@@ -182,6 +224,22 @@ public static partial class Core
                 $"{Environment.NewLine}Search paths include {string.Join("; ", paths.Select(p => $"{p.libvlc},{p.libvlccore}"))}");
         }
     }
+    /// <summary>
+    /// CodeBrix addition: when libvlc was loaded out of a VLC.app install, point it at
+    /// the app bundle's plugin directory (unless the user already set VLC_PLUGIN_PATH
+    /// themselves) — without this, libvlc_new() finds no modules and returns null.
+    /// </summary>
+    static void ConfigureVlcAppPluginPath(string loadedLibvlcPath)
+    {
+        if (!PlatformHelper.IsMac
+            || !loadedLibvlcPath.StartsWith(Constants.MacVlcAppLibraryDirectory, StringComparison.Ordinal)
+            || Native.GetEnv("VLC_PLUGIN_PATH") != IntPtr.Zero)
+        {
+            return;
+        }
+        Native.SetEnv("VLC_PLUGIN_PATH", Constants.MacVlcAppPluginsDirectory, 1);
+    }
+
     internal static void EnsureLoaded()
     {
         if (LibVLCLoaded)

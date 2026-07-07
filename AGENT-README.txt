@@ -83,16 +83,63 @@ IMPORTANT: The package names carry the ".LgplLicenseForever" suffix (e.g.
 use the full package name when installing. All packages from this repo
 always publish at the same version; never mix versions.
 
-The library depends on the native libvlc runtime. On Windows install
-VideoLAN.LibVLC.Windows via NuGet; on Linux install libvlc via the system
-package manager (`sudo apt install libvlc5 vlc-plugin-base` on
-Debian/Ubuntu — the library plus base plugins; neither the full `vlc`
-desktop application NOR the build-time `libvlc-dev` package is required —
-on Linux the loader maps the `libvlc` P/Invoke onto the versioned runtime
-soname `libvlc.so.5`, so the runtime package alone suffices); on macOS install
-VLC.app or VideoLAN.LibVLC.Mac via NuGet. The library will search the
-standard system search paths at runtime; call `Core.Initialize()` before
-constructing any LibVLC instance to ensure the native library is loaded.
+NATIVE LIBVLC REQUIREMENT — READ THIS. All three packages are pure managed
+assemblies; NONE of them bundles the native libvlc engine. Every feature
+that touches the engine (playback, WebcamSession capture, recording,
+VideoFrameSink/Source) HARD-REQUIRES libvlc to be present on the machine at
+runtime, and what "present" means differs per platform:
+
+  Windows:  the CONSUMING APPLICATION must reference the
+            VideoLAN.LibVLC.Windows NuGet package, which copies libvlc.dll,
+            libvlccore.dll, and the plugins folder into the app output.
+            An installed VLC desktop application is NOT used and NOT
+            searched on Windows — the NuGet reference is the only supported
+            mechanism.
+  Linux:    install the runtime libraries via the system package manager:
+            `sudo apt install libvlc5 vlc-plugin-base` on Debian/Ubuntu.
+            Neither the full `vlc` desktop application nor the build-time
+            `libvlc-dev` package is required — the loader maps the `libvlc`
+            P/Invoke onto the versioned runtime soname `libvlc.so.5`, so
+            the runtime packages alone suffice.
+  macOS:    the VLC media player application MUST be installed on the Mac.
+            That is the ordinary desktop app whose icon is named "VLC" in
+            the Applications folder / Launchpad; its on-disk bundle is
+            /Applications/VLC.app, which is how the rest of these docs
+            refer to it. To get it: go to https://www.videolan.org/vlc/
+            and click "Download VLC" (the site detects macOS; the direct
+            page is https://www.videolan.org/vlc/download-macosx.html —
+            pick the build matching the Mac, Apple Silicon or Intel, or
+            the universal binary), open the .dmg, and drag VLC into
+            /Applications. The loader finds /Applications/VLC.app
+            automatically and points libvlc at the bundle's plugin
+            directory via VLC_PLUGIN_PATH — no configuration needed.
+            (Alternatively an application may ship the libvlc dylibs in
+            its own output — app-bundled libraries win over VLC.app — but
+            the VideoLAN.LibVLC.Mac NuGet package is abandoned at 3.1.3.1
+            with x64-only binaries, so on Apple Silicon installing VLC is
+            effectively THE route, and it is the one this repo verifies.)
+
+So: "the VLC application must be installed" is TRUE on macOS, wrong on
+Windows (NuGet reference instead), and wrong on Linux (runtime libraries
+instead).
+
+What happens when libvlc is missing or cannot be loaded:
+  - Engine level: `Core.Initialize()` (or the first `new LibVLC()`) throws
+    CodeBrix.Platform.MediaPlayerCore.VLCException listing the search paths
+    it tried.
+  - CodeBrix.Webcam level: opening a session (WebcamSession.Start) wraps
+    that failure in a CodeBrix.Webcam.WebcamException whose message states
+    the per-platform fix (install VLC.app / add VideoLAN.LibVLC.Windows /
+    apt install ...) — consumers of CodeBrix.Webcam never need to catch an
+    engine exception type, consistent with the no-leak rule.
+  - Webcam device ENUMERATION does not need libvlc at all: the device
+    providers talk to the OS directly (DirectShow / V4L2 / AVFoundation),
+    so WebcamDevices.GetImagingMediaDeviceListAsync works — and returns
+    full capability data — on a machine with no libvlc installed. Only
+    opening a WebcamSession (and the engine/playback APIs) requires it.
+
+Call `Core.Initialize()` before constructing any LibVLC instance to ensure
+the native library is loaded (CodeBrix.Webcam does this internally).
 
 
 KEY NAMESPACE
@@ -277,8 +324,69 @@ every file kept its namespace and content verbatim):
                                        factory, overlay compositor, sidecar WAV
                                        recorder) and per-OS providers:
                                        Linux/ (V4L2 via libc ioctls), Windows/
-                                       (DirectShow COM), Darwin/ (stub — see
-                                       MAC-PORTING-GUIDE.txt)
+                                       (DirectShow COM), Darwin/ (AVFoundation via
+                                       Objective-C-runtime P/Invoke — enumeration,
+                                       mode controls, TCC consent; no shim dylib)
+
+
+CODEBRIX.WEBCAM ON MACOS
+------------------------
+How the macOS side of CodeBrix.Webcam works, and the permission model that
+governs it (implemented 2026-07-06; the historical handoff rationale lives in
+MAC-PORTING-GUIDE.txt at the repo root).
+
+Implementation shape:
+  - Device enumeration and camera controls use AVFoundation, called directly
+    through the Objective-C runtime (objc_msgSend P/Invoke) from
+    src/CodeBrix.Webcam/Internal/Darwin/ — fully managed, no native shim
+    dylib, nothing extra packed into the nuget. Enumeration is vendor-
+    agnostic: built-in MacBook/iMac cameras, any external USB/Thunderbolt
+    camera, and iPhone Continuity Cameras are all discovered.
+  - IImagingMediaDevice.Id is the AVCaptureDevice uniqueID — the exact
+    identifier libvlc's avcapture:// capture MRL accepts. Audio capture
+    (paired microphone) rides on libvlc's qtsound:// input, keyed by the
+    audio device's uniqueID.
+  - Camera controls are sparser than on Windows/Linux BY DESIGN: AVFoundation
+    only exposes the focus / exposure / white-balance MODE selectors, never
+    UVC processing controls (brightness, contrast, zoom, ...). Many cameras
+    therefore enumerate with few or zero controls on macOS. That is correct
+    behavior — do not "fix" it by fabricating control ranges.
+  - libvlc loading: application-bundled libraries win, then the loader falls
+    back to /Applications/VLC.app and sets VLC_PLUGIN_PATH to the bundle's
+    plugin directory (see the CodeBrix additions in
+    src/CodeBrix.MediaCore/Core/). The VideoLAN.LibVLC.Mac nuget ships
+    x64-only binaries, so installed VLC.app is the practical libvlc source on
+    Apple Silicon.
+  - Hardware quirk seen in the field: a USB 3 camera attached at USB 2.0
+    speed (e.g. through a USB 2.0 hub) may present NO USB audio interface at
+    all, so macOS sees no microphone and PairedMicrophone is legitimately
+    null. Reconnecting the camera to a USB 3 port restores the mic.
+
+PERMISSIONS (TCC) — the part that surprises everyone:
+macOS gates camera and microphone capture behind per-application user
+consent ("TCC"). The critical detail for this repo: libvlc's avcapture and
+qtsound modules only CHECK the authorization status — they never trigger the
+consent prompt — so without help, capture from a not-yet-authorized process
+always fails with "access has not been granted by the user", and the user is
+never even asked. WebcamSession.Start() therefore requests consent itself
+(Internal/Darwin/DarwinCaptureAuthorization.cs): on first use the system
+prompt appears, and a denial surfaces as a WebcamException pointing at
+System Settings > Privacy & Security > Camera (or > Microphone).
+
+Consequences to keep in mind:
+  - Consent attaches to the RESPONSIBLE application. For an app bundle, that
+    is the app itself — and a bundled .app MUST declare
+    NSCameraUsageDescription (and NSMicrophoneUsageDescription when audio is
+    captured) in its Info.plist, or macOS refuses access outright. For a bare
+    `dotnet run` / `dotnet test` process, consent attaches to the hosting
+    terminal application instead, and no usage-description string is needed.
+  - Enumeration (WebcamDevices.GetImagingMediaDeviceListAsync) does NOT
+    require consent; only opening a capture session does.
+  - Non-interactive contexts (CI runners, ssh sessions, AI-agent shells)
+    CANNOT show the consent prompt: the request is denied instantly and the
+    TCC status stays "not determined". No amount of retrying helps — a human
+    must run live capture once from an interactive session (e.g. Terminal)
+    and click Allow; after that, capture works in that context from then on.
 
 
 TESTING
@@ -292,6 +400,21 @@ the host. On Windows CI the `VideoLAN.LibVLC.Windows` package is referenced
 in the test csproj. On Linux the host must have `libvlc` installed via the
 system package manager. Tests that cannot locate libvlc at runtime skip
 themselves.
+
+LIVE CAMERA TESTS (opt-in): tests/CodeBrix.Webcam.Tests contains
+LiveCameraTests, which open a REAL camera — they need a physical webcam, a
+desktop session, and exclusive device access, so they skip unless explicitly
+enabled with an environment variable:
+
+    CODEBRIX_WEBCAM_RUN_CAMERA_TESTS=1 dotnet test tests/CodeBrix.Webcam.Tests
+
+On macOS this command MUST be run by a human from an interactive terminal at
+least once: the first live capture triggers the TCC camera-consent prompt
+(see CODEBRIX.WEBCAM ON MACOS above), and consent is granted to the hosting
+terminal application. Runs from non-interactive shells (CI, ssh, AI-agent
+tool shells) are denied instantly without any prompt, so the live tests fail
+there with a WebcamException about camera access even though the code is
+fine. The plain unit/enumeration tests need no consent and run anywhere.
 
 
 LICENSE

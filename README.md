@@ -12,9 +12,15 @@ The heart of this repository is a .NET 10 drop-in-compatible port of the `LibVLC
 
 **Namespace note:** for drop-in compatibility, all types in the first two packages live under the original `CodeBrix.Platform.MediaPlayerCore` namespaces — including the types that ship in the `CodeBrix.MediaCore` assembly. `using CodeBrix.Platform.MediaPlayerCore;` is the right directive for both. This package-name/namespace mismatch is deliberate and permanent. `CodeBrix.Webcam` types live under `CodeBrix.Webcam.*`, and its public API never exposes an engine type (a reflection test in this repository enforces that permanently).
 
-Neither package bundles the native `libvlc` library: it must be installed or referenced via one of the official `VideoLAN.LibVLC.*` runtime packages (e.g. `VideoLAN.LibVLC.Windows`). On Linux there is no VideoLAN NuGet runtime package — install libvlc via the system package manager instead (e.g. `sudo apt install libvlc5 vlc-plugin-base` on Debian/Ubuntu).
+None of these packages bundles the native `libvlc` engine — it must be present on the machine at runtime, and the mechanism differs per platform:
 
-Both packages support applications and assemblies that target Microsoft .NET version 10.0 and later.
+* **Windows** — reference the official `VideoLAN.LibVLC.Windows` NuGet package in the *application* project (it copies libvlc and its plugins into the app output). An installed VLC desktop application is not used on Windows.
+* **Linux** — install the runtime libraries via the system package manager, e.g. `sudo apt install libvlc5 vlc-plugin-base` on Debian/Ubuntu (no VideoLAN NuGet runtime package exists for Linux; the desktop `vlc` application and `libvlc-dev` are not needed).
+* **macOS** — the VLC media player application (`VLC.app`) **must be installed**: download it from [videolan.org/vlc](https://www.videolan.org/vlc/) and drag it into `/Applications`; the loader finds it (and its plugins) automatically. An application may instead bundle the libvlc dylibs itself. Note the `VideoLAN.LibVLC.Mac` NuGet package ships x64-only binaries, so installing VLC is the practical route on Apple Silicon.
+
+If libvlc cannot be loaded, `Core.Initialize()` throws a `VLCException` listing the paths searched; `CodeBrix.Webcam` wraps that in a `WebcamException` whose message states the per-platform fix. Webcam *device enumeration* works without libvlc — only opening a capture session (and the playback APIs) requires it.
+
+All of these packages support applications and assemblies that target Microsoft .NET version 10.0 and later.
 Microsoft .NET version 10.0 is a Long-Term Supported (LTS) version of .NET, and was released on Nov 11, 2025; and will be actively supported by Microsoft until Nov 14, 2028.
 Please update your C#/.NET code and projects to the latest LTS version of Microsoft .NET.
 
