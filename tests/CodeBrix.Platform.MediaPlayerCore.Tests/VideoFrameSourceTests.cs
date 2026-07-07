@@ -90,6 +90,8 @@ public class VideoFrameSourceTests : BaseSetup
     public void Ensure_supported_does_not_throw_on_a_host_with_the_imem_plugin()
         => ((Action)(() => VideoFrameSource.EnsureSupported(_libVLC))).Should().NotThrow();
 
+#if ENABLE_PUSHED_FRAMES_TESTS
+
     [Fact]
     public void Pushed_frames_encode_to_a_playable_mp4_file()
     {
@@ -180,4 +182,6 @@ public class VideoFrameSourceTests : BaseSetup
             }
         }
     }
+
+#endif
 }

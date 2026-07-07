@@ -89,12 +89,23 @@ that touches the engine (playback, WebcamSession capture, recording,
 VideoFrameSink/Source) HARD-REQUIRES libvlc to be present on the machine at
 runtime, and what "present" means differs per platform:
 
-  Windows:  the CONSUMING APPLICATION must reference the
-            VideoLAN.LibVLC.Windows NuGet package, which copies libvlc.dll,
-            libvlccore.dll, and the plugins folder into the app output.
-            An installed VLC desktop application is NOT used and NOT
-            searched on Windows — the NuGet reference is the only supported
-            mechanism.
+  Windows:  an installed VLC desktop application is NOT used and NOT
+            searched on Windows — NuGet package references are the only
+            supported mechanism. All applications that run on Windows and
+            consume the CodeBrix.Webcam library (or the
+            CodeBrix.Webcam.LgplLicenseForever nuget package) MUST have the
+            following TWO package references:
+
+              <PackageReference Include="VideoLAN.LibVLC.Windows" Version="{latest version}" />
+              <!--
+              NOTE:
+              As of version 3.0.21 (September 2024) of the VideoLAN.LibVLC.Windows Nuget package
+              referenced above, a critical 'libdshow_plugin.dll' library is no longer included
+              with the package.  Instead, you also have to have the VideoLAN.LibVLC.Windows.GPL
+              package referenced below.  Note that this .GPL package carries a GPL-2.0-or-later
+              license, which likely has implications for the licensing of your application.
+              -->
+              <PackageReference Include="VideoLAN.LibVLC.Windows.GPL" Version="{latest version}" />
   Linux:    install the runtime libraries via the system package manager:
             `sudo apt install libvlc5 vlc-plugin-base` on Debian/Ubuntu.
             Neither the full `vlc` desktop application nor the build-time

@@ -14,7 +14,20 @@ The heart of this repository is a .NET 10 drop-in-compatible port of the `LibVLC
 
 None of these packages bundles the native `libvlc` engine — it must be present on the machine at runtime, and the mechanism differs per platform:
 
-* **Windows** — reference the official `VideoLAN.LibVLC.Windows` NuGet package in the *application* project (it copies libvlc and its plugins into the app output). An installed VLC desktop application is not used on Windows.
+* **Windows** — reference the official VideoLAN NuGet packages in the *application* project. An installed VLC desktop application is not used on Windows. All applications that run on Windows and consume the CodeBrix.Webcam library (or the `CodeBrix.Webcam.LgplLicenseForever` NuGet package) *must* have the following two package references:
+
+  ```xml
+  <PackageReference Include="VideoLAN.LibVLC.Windows" Version="{latest version}" />
+  <!--
+  NOTE:
+  As of version 3.0.21 (September 2024) of the VideoLAN.LibVLC.Windows Nuget package
+  referenced above, a critical 'libdshow_plugin.dll' library is no longer included
+  with the package.  Instead, you also have to have the VideoLAN.LibVLC.Windows.GPL
+  package referenced below.  Note that this .GPL package carries a GPL-2.0-or-later
+  license, which likely has implications for the licensing of your application.
+  -->
+  <PackageReference Include="VideoLAN.LibVLC.Windows.GPL" Version="{latest version}" />
+  ```
 * **Linux** — install the runtime libraries via the system package manager, e.g. `sudo apt install libvlc5 vlc-plugin-base` on Debian/Ubuntu (no VideoLAN NuGet runtime package exists for Linux; the desktop `vlc` application and `libvlc-dev` are not needed).
 * **macOS** — the VLC media player application (`VLC.app`) **must be installed**: download it from [videolan.org/vlc](https://www.videolan.org/vlc/) and drag it into `/Applications`; the loader finds it (and its plugins) automatically. An application may instead bundle the libvlc dylibs itself. Note the `VideoLAN.LibVLC.Mac` NuGet package ships x64-only binaries, so installing VLC is the practical route on Apple Silicon.
 
