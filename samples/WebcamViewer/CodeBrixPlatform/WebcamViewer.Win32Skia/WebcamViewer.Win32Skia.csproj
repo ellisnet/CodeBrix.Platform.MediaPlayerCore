@@ -24,7 +24,7 @@
     All other packages come from WebcamViewer.Core.
   -->
   <ItemGroup>
-    <PackageReference Include="CodeBrix.Platform.Runtime.Skia.Win32.ApacheLicenseForever" Version="1.0.185.1199" />
+    <PackageReference Include="CodeBrix.Platform.Runtime.Skia.Win32.ApacheLicenseForever" Version="1.0.186.1273" />
   </ItemGroup>
   <!-- Native libvlc runtime for CodeBrix.Webcam: the VideoLAN package lays the
        libvlc binaries + plugins into the output folder on Windows. -->

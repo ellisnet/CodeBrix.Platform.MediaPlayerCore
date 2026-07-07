@@ -24,6 +24,7 @@
     <Project Path="CodeBrixPlatform/WebcamViewer.LinuxFrameBuffer/WebcamViewer.LinuxFrameBuffer.csproj" />
     <Project Path="CodeBrixPlatform/WebcamViewer.MacOS/WebcamViewer.MacOS.csproj" />
   </Folder>
+  <Project Path="../../src/CodeBrix.MediaCore/CodeBrix.MediaCore.csproj" />
   <Project Path="../../src/CodeBrix.Webcam/CodeBrix.Webcam.csproj" />
   <Project Path="WebcamViewer.WinUI/WebcamViewer.WinUI.csproj">
     <Platform Solution="*|x86" Project="x86" />
