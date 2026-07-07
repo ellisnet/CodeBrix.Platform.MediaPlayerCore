@@ -30,7 +30,4 @@
     <!-- PNG encoding for the frame-photo feature -->
     <PackageReference Include="CodeBrix.Imaging.ApacheLicenseForever" Version="1.0.164.1087" />
   </ItemGroup>
-
-  <!-- No VideoLAN/libvlc packages: on Windows, CodeBrix.Webcam captures and records
-       through the operating system's built-in Media Foundation engine. -->
 </Project>

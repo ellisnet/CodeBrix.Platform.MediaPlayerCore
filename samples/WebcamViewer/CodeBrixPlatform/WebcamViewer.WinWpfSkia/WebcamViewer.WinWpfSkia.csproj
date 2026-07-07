@@ -34,7 +34,4 @@
   <ItemGroup>
     <PackageReference Include="CodeBrix.Platform.Runtime.Skia.Wpf.ApacheLicenseForever" Version="1.0.186.1273" />
   </ItemGroup>
-
-  <!-- No VideoLAN/libvlc packages: on Windows, CodeBrix.Webcam captures and records
-       through the operating system's built-in Media Foundation engine. -->
 </Project>

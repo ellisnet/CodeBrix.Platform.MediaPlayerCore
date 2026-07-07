@@ -76,7 +76,4 @@
   <PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
     <HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
   </PropertyGroup>
-
-  <!-- No VideoLAN/libvlc packages: on Windows, CodeBrix.Webcam captures and records
-       through the operating system's built-in Media Foundation engine. -->
 </Project>
