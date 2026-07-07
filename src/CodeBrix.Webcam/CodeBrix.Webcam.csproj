@@ -73,7 +73,7 @@
     <Product>CodeBrix.Webcam</Product>
     <Title>CodeBrix.Webcam</Title>
     <Authors>Jeremy Ellis</Authors>
-    <Description>A cross-platform webcam capture library for .NET 10: rich async device enumeration (supported resolutions, frame rates, pixel formats, and camera controls), live BGRA frame streaming for on-screen preview in any UI stack, frame-photo capture, video recording to MP4/H.264 (or low-CPU MJPEG passthrough on Linux/macOS), and live-updatable transparent overlay burn-in. On Windows, capture and recording run on the operating system's built-in Media Foundation engine - no native runtime or VideoLAN package is required. On Linux and macOS, capture runs on the CodeBrix.MediaCore libvlc engine and requires the native libvlc runtime to be installed. Consumers use only CodeBrix.Webcam.* types.</Description>
+    <Description>A cross-platform webcam capture library for .NET 10: rich async device enumeration, live BGRA frame streaming, frame-photo capture, video recording to MP4/H.264, and live-updatable transparent overlay burn-in.</Description>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageProjectUrl>https://github.com/ellisnet/CodeBrix.Platform.MediaPlayerCore</PackageProjectUrl>
     <RepositoryUrl>https://github.com/ellisnet/CodeBrix.Platform.MediaPlayerCore</RepositoryUrl>

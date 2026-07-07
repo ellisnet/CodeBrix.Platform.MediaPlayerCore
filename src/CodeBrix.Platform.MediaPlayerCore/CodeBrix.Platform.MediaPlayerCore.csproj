@@ -84,14 +84,14 @@
     <Product>CodeBrix.Platform.MediaPlayerCore</Product>
     <Title>CodeBrix.Platform.MediaPlayerCore</Title>
     <Authors>Jeremy Ellis</Authors>
-    <Description>A fully managed, cross-platform audio / video media-player library for .NET 10. A drop-in-compatible port of LibVLCSharp 3.9.7 — the official .NET wrapper around VideoLAN's LibVLC library — narrowed to the cross-platform managed core. The libvlc engine binding (LibVLC, Media, MediaPlayer, VideoFrameSink, etc.) ships in the CodeBrix.MediaCore.LgplLicenseForever dependency of this package; this package adds the MediaPlayerElement-style management layer and video-view interfaces for building playback UIs. All types keep their CodeBrix.Platform.MediaPlayerCore namespaces, so consumers need no source changes. Requires the native libvlc runtime to be installed or referenced via the official VideoLAN.LibVLC.* NuGet packages.</Description>
+    <Description>A fully managed, cross-platform audio / video media-player library for .NET 10.</Description>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageProjectUrl>https://github.com/ellisnet/CodeBrix.Platform.MediaPlayerCore</PackageProjectUrl>
     <RepositoryUrl>https://github.com/ellisnet/CodeBrix.Platform.MediaPlayerCore</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageIcon>icon-codebrix-128.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <Copyright>Copyright (C) VideoLAN and the LibVLCSharp authors. Copyright (c) 2026 Jeremy Ellis and contributors.</Copyright>
+    <Copyright>Copyright (c) 2026 Jeremy Ellis and contributors.</Copyright>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <IsPackable>true</IsPackable>
