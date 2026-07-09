@@ -24,6 +24,6 @@
     All other packages come from WebcamViewer.Core.
   -->
   <ItemGroup>
-    <PackageReference Include="CodeBrix.Platform.Runtime.Skia.MacOS.ApacheLicenseForever" Version="1.0.186.1273" />
+    <PackageReference Include="CodeBrix.Platform.Runtime.Skia.MacOS.ApacheLicenseForever" Version="1.0.189.446" />
   </ItemGroup>
 </Project>
