@@ -24,6 +24,6 @@
     All other packages come from WebcamViewer.Core.
   -->
   <ItemGroup>
-    <PackageReference Include="CodeBrix.Platform.Runtime.Skia.FrameBuffer.ApacheLicenseForever" Version="1.0.189.446" />
+    <PackageReference Include="CodeBrix.Platform.Runtime.Skia.FrameBuffer.ApacheLicenseForever" Version="1.0.193.1124" />
   </ItemGroup>
 </Project>
