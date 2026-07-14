@@ -11,7 +11,7 @@ namespace CodeBrix.Webcam;
 
 /// <summary>
 /// A live capture session on one camera: continuous BGRA preview frames via
-/// <see cref="FrameReceived"/>, on-demand frame-photos via <see cref="CapturePhoto"/>,
+/// <see cref="FrameReceived"/>, on-demand frame-photos via <see cref="CapturePhoto(TimeSpan)"/>,
 /// video recording via <see cref="StartRecording"/>/<see cref="StopRecording"/>, and a
 /// live-updatable transparent overlay (<see cref="SetOverlay"/>) that is burned into
 /// photos and recordings.
@@ -61,6 +61,13 @@ public sealed class WebcamSession : IDisposable
     private byte[] _photoBuffer;
     private int _photoWidth;
     private int _photoHeight;
+
+    // The latest-frame cache is OFF until the first TryCopyLatestFrame call, so sessions
+    // that never use it pay no per-frame copy.
+    private volatile bool _latestFrameCacheEnabled;
+    private byte[] _latestFrame;
+    private int _latestFrameWidth;
+    private int _latestFrameHeight;
 
     private volatile RecordingMode _recordingMode;
     private WebcamRecordingOptions _recordingOptions;
@@ -275,6 +282,59 @@ public sealed class WebcamSession : IDisposable
             throw new WebcamException("Photo capture failed (no frame data).");
         }
         return new WebcamPhoto(pixels, width, height, DateTime.UtcNow);
+    }
+
+    /// <summary>
+    /// Captures the next live frame as a photo, optionally flipped left-to-right — so a
+    /// still reads like a mirror, matching a mirrored ("selfie") live preview. See
+    /// <see cref="CapturePhoto(TimeSpan)"/> for the capture semantics.
+    /// </summary>
+    /// <param name="mirrorHorizontally"><c>true</c> to flip the photo left-to-right.</param>
+    /// <param name="timeout">How long to wait for the next frame; default 2 seconds when omitted.</param>
+    /// <returns>The captured photo.</returns>
+    /// <exception cref="WebcamException">The session is not running, or no frame arrived in time.</exception>
+    public WebcamPhoto CapturePhoto(bool mirrorHorizontally, TimeSpan timeout = default)
+    {
+        var photo = CapturePhoto(timeout);
+        return mirrorHorizontally ? photo.FlipHorizontal() : photo;
+    }
+
+    /// <summary>
+    /// Copies the most recent live frame — tightly packed BGRA, the same pixels a
+    /// <see cref="FrameReceived"/> handler sees — into <paramref name="buffer"/>, which is
+    /// (re)allocated when its size does not match. Safe to call from any thread, any time:
+    /// this is the pull-based alternative to <see cref="FrameReceived"/> for consumers
+    /// that repaint on their own schedule (a UI paint handler, a vision pipeline).
+    /// <para/>
+    /// The internal frame cache is off until the FIRST call (sessions that never call
+    /// this pay no per-frame copy), so the first call — and every call until the next
+    /// frame arrives — returns <c>false</c>. Call it from a paint/poll loop and treat
+    /// <c>false</c> as "nothing to show yet".
+    /// </summary>
+    /// <param name="buffer">The caller's frame buffer; replaced when the size does not match.</param>
+    /// <param name="width">The frame's width in pixels; 0 when no frame is available.</param>
+    /// <param name="height">The frame's height in pixels; 0 when no frame is available.</param>
+    /// <returns><c>true</c> when a frame was copied.</returns>
+    public bool TryCopyLatestFrame(ref byte[] buffer, out int width, out int height)
+    {
+        _latestFrameCacheEnabled = true;
+        lock (_frameSync)
+        {
+            if (_latestFrame == null)
+            {
+                width = 0;
+                height = 0;
+                return false;
+            }
+            if (buffer == null || buffer.Length != _latestFrame.Length)
+            {
+                buffer = new byte[_latestFrame.Length];
+            }
+            Array.Copy(_latestFrame, buffer, _latestFrame.Length);
+            width = _latestFrameWidth;
+            height = _latestFrameHeight;
+            return true;
+        }
     }
 
     /// <summary>
@@ -532,6 +592,12 @@ public sealed class WebcamSession : IDisposable
                 var previewPlane = _options.CompositeOverlayOnPreview && composited != IntPtr.Zero
                     ? composited
                     : frame.Plane;
+
+                if (_latestFrameCacheEnabled)
+                {
+                    CopyPackedToLatestFrameLocked(previewPlane, frame);
+                }
+
                 var handler = FrameReceived;
                 if (handler != null)
                 {
@@ -558,6 +624,22 @@ public sealed class WebcamSession : IDisposable
             _compositeBuffer = Marshal.AllocHGlobal((int)requiredBytes);
             _compositeBufferSize = requiredBytes;
         }
+    }
+
+    private void CopyPackedToLatestFrameLocked(IntPtr plane, CaptureFrameEventArgs frame)
+    {
+        var packedRow = (int)(frame.Width * 4);
+        var required = packedRow * (int)frame.Height;
+        if (_latestFrame == null || _latestFrame.Length != required)
+        {
+            _latestFrame = new byte[required];
+        }
+        for (var y = 0; y < frame.Height; y++)
+        {
+            Marshal.Copy(plane + (int)(y * frame.PitchBytes), _latestFrame, y * packedRow, packedRow);
+        }
+        _latestFrameWidth = (int)frame.Width;
+        _latestFrameHeight = (int)frame.Height;
     }
 
     private void CopyPackedLocked(IntPtr plane, CaptureFrameEventArgs frame)

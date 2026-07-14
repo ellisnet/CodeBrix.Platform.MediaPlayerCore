@@ -33,4 +33,33 @@ public sealed class WebcamPhoto
 
     /// <summary>The UTC time the frame was captured.</summary>
     public DateTime CapturedAtUtc { get; }
+
+    /// <summary>
+    /// Returns a NEW photo whose pixels are flipped left-to-right — so a webcam still
+    /// reads like a mirror, matching the mirrored ("selfie") live preview the user was
+    /// watching when the photo was taken. This photo is not modified; the new photo
+    /// keeps the same dimensions and <see cref="CapturedAtUtc"/>.
+    /// </summary>
+    /// <returns>A horizontally mirrored copy of this photo.</returns>
+    public WebcamPhoto FlipHorizontal()
+    {
+        var flipped = new byte[PixelsBgra32.Length];
+        var lastPixelOffset = (Width - 1) * 4;
+        for (var y = 0; y < Height; y++)
+        {
+            var rowStart = y * StrideBytes;
+            var sourceOffset = rowStart;
+            var targetOffset = rowStart + lastPixelOffset;
+            for (var x = 0; x < Width; x++)
+            {
+                flipped[targetOffset] = PixelsBgra32[sourceOffset];
+                flipped[targetOffset + 1] = PixelsBgra32[sourceOffset + 1];
+                flipped[targetOffset + 2] = PixelsBgra32[sourceOffset + 2];
+                flipped[targetOffset + 3] = PixelsBgra32[sourceOffset + 3];
+                sourceOffset += 4;
+                targetOffset -= 4;
+            }
+        }
+        return new WebcamPhoto(flipped, Width, Height, CapturedAtUtc);
+    }
 }

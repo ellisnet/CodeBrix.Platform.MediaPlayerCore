@@ -71,6 +71,49 @@ public class LiveCameraTests
     }
 
     [Fact(Skip = SkipReason, SkipUnless = nameof(CanRunCameraTests), SkipType = typeof(LiveCameraTests))]
+    public async Task Latest_frame_cache_and_mirrored_photo_work_on_a_live_session()
+    {
+        //Arrange
+        var devices = await WebcamDevices.GetImagingMediaDeviceListAsync();
+        devices.Count.Should().BeGreaterThan(0);
+        using var session = new WebcamSession(devices[0]);
+        var frameSeen = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        session.FrameReceived += (_, _) => frameSeen.TrySetResult(true);
+
+        //Act / Assert - before any frame (and before the cache is enabled), the
+        //  pull-based accessor reports no frame
+        byte[] buffer = null;
+        session.TryCopyLatestFrame(ref buffer, out var width, out var height).Should().BeFalse();
+
+        session.Start();
+        (await Task.WhenAny(frameSeen.Task,
+            Task.Delay(TimeSpan.FromSeconds(15), TestContext.Current.CancellationToken)))
+            .Should().BeSameAs((object)frameSeen.Task);
+
+        //The first TryCopyLatestFrame above enabled the cache, so frames are now cached;
+        //  poll briefly for the next frame to land in it
+        var copied = false;
+        for (var attempt = 0; attempt < 50 && !copied; attempt++)
+        {
+            copied = session.TryCopyLatestFrame(ref buffer, out width, out height);
+            if (!copied) { Thread.Sleep(100); }
+        }
+        copied.Should().BeTrue();
+        width.Should().Be((int)session.FrameWidth);
+        height.Should().Be((int)session.FrameHeight);
+        buffer.Length.Should().Be(width * height * 4);
+        buffer.Any(b => b != 0).Should().BeTrue();
+
+        //A mirrored photo has the same pixels as the unmirrored one, flipped left-to-right
+        //  (compare via a re-flip rather than pixel equality: two separate captures are
+        //  different frames, so just verify shape and non-emptiness here)
+        var mirrored = session.CapturePhoto(mirrorHorizontally: true, TimeSpan.FromSeconds(5));
+        mirrored.Width.Should().Be((int)session.FrameWidth);
+        mirrored.Height.Should().Be((int)session.FrameHeight);
+        mirrored.PixelsBgra32.Any(b => b != 0).Should().BeTrue();
+    }
+
+    [Fact(Skip = SkipReason, SkipUnless = nameof(CanRunCameraTests), SkipType = typeof(LiveCameraTests))]
     public async Task Overlay_recording_produces_an_mp4_via_the_frame_path()
     {
         //Arrange

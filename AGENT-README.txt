@@ -32,8 +32,10 @@ It produces THREE NuGet packages:
       enumeration (WebcamDevices.GetImagingMediaDeviceListAsync →
       IImagingMediaDevice with the full format×resolution×framerate matrix,
       camera controls, hardware ids, paired microphone), WebcamSession (live
-      BGRA FrameReceived frames, CapturePhoto, StartRecording/StopRecording
-      to MP4/H.264 or MJPEG-passthrough AVI, SetOverlay burn-in). Depends on
+      BGRA frames pushed via FrameReceived or pulled on demand via
+      TryCopyLatestFrame, CapturePhoto with optional mirror,
+      StartRecording/StopRecording to MP4/H.264 or MJPEG-passthrough AVI,
+      SetOverlay burn-in), WebcamPhoto.FlipHorizontal(). Depends on
       CodeBrix.MediaCore.LgplLicenseForever at the same version.
       Project: src/CodeBrix.Webcam/
 
@@ -218,6 +220,128 @@ Main entry point (in order of typical use):
   MediaDiscoverer / RendererDiscoverer / Equalizer / Dialog
     See the source files under src/CodeBrix.MediaCore/ for exact
     signatures. API parity with LibVLCSharp 3.9.7 is the target.
+
+
+USING CODEBRIX.WEBCAM (API AND PATTERNS)
+----------------------------------------
+The webcam package's namespaces are CodeBrix.Webcam, CodeBrix.Webcam.Devices,
+and CodeBrix.Webcam.Capture (NOT CodeBrix.Platform.MediaPlayerCore - the
+no-leak rule keeps the engine invisible here).
+
+Main types:
+
+  WebcamDevices (static, Devices)
+    Task<IReadOnlyList<IImagingMediaDevice>> GetImagingMediaDeviceListAsync()
+    -- Async camera discovery with the full format x resolution x framerate
+       capability matrix, camera controls, hardware ids, and the paired
+       microphone. Talks to the OS directly (DirectShow / V4L2 /
+       AVFoundation): needs NO libvlc, NO camera permission, and works
+       headless - safe to call in tests and at app startup.
+
+  WebcamSession (IDisposable)
+    new WebcamSession(IImagingMediaDevice device[, WebcamSessionOptions options])
+    Start() / Stop() / IsRunning / FrameWidth / FrameHeight
+    event FrameReceived                      -- push: every live frame (see threading below)
+    bool TryCopyLatestFrame(ref byte[] buffer, out int width, out int height)
+                                             -- pull: the most recent frame on demand
+    WebcamPhoto CapturePhoto(TimeSpan timeout = default)
+    WebcamPhoto CapturePhoto(bool mirrorHorizontally, TimeSpan timeout = default)
+    StartRecording(WebcamRecordingOptions) / StopRecording()
+    SetOverlay(WebcamOverlay) / ClearOverlay()
+    MonitorAudio / MonitorVolume / IsAudioCaptureActive
+
+  WebcamPhoto (Capture)
+    byte[] PixelsBgra32; int Width; int Height; int StrideBytes (= Width*4);
+    DateTime CapturedAtUtc
+    WebcamPhoto FlipHorizontal()             -- NEW photo, mirrored left-to-right;
+                                                original untouched; dims/timestamp kept
+
+Two ways to consume live frames - pick per consumer, mix freely:
+
+  1. PUSH - subscribe FrameReceived. Raised on an internal CAPTURE thread;
+     the event args' pixel buffer (Width/Height/PitchBytes/PixelPlane, plus
+     CopyTo(byte[])) is only valid until the handler returns. Copy what you
+     need and get out fast; never touch UI objects or call session methods
+     from inside the handler. Right choice for pipelines that want EVERY
+     frame (encoders, vision processing).
+
+  2. PULL - call TryCopyLatestFrame from wherever repainting happens (a UI
+     paint handler, a render loop, a poll). It copies the most recent frame
+     - tightly packed BGRA, the same pixels a FrameReceived handler sees -
+     into your reusable buffer, reallocating it only on size changes. Safe
+     from any thread. The internal cache is OFF until the first call, so
+     sessions that never pull pay no per-frame copy; the first call (and
+     any call before the next frame lands) returns false - treat false as
+     "nothing to show yet". Right choice for previews, which only ever
+     want the newest frame. A typical page wires:
+       session.FrameReceived += (_, _) => canvas.Invalidate();   //pacing only
+       //paint handler: session.TryCopyLatestFrame(ref _buffer, out w, out h)
+
+Mirrored ("selfie") UX: users expect a live preview to behave like a
+mirror, and a captured still to match what they saw. Mirror the preview at
+RENDER time (negative-X canvas transform - see the renderer below) and
+mirror stills with CapturePhoto(mirrorHorizontally: true) (or
+photo.FlipHorizontal() later). Remember that computer-vision results
+computed on UNMIRRORED frames must be mirrored too (x' = 1 - x) before
+they are compared against anything the user sees.
+
+Canonical SkiaSharp frame renderer (aspect-fit, centered on black,
+optional mirror) - copy this class into Skia-based apps; it is the same
+rendering approach the WebcamViewer and WebcamPainter samples use (those
+predate TryCopyLatestFrame and pull from an app-side cache instead).
+Create ONE instance per canvas (it caches buffers; UI-thread use only):
+
+  public sealed class WebcamFrameRenderer
+  {
+      private byte[] _frameBuffer;
+      private SKBitmap _bitmap;
+
+      public void Render(SKSurface surface, SKImageInfo info, WebcamSession session, bool mirror)
+      {
+          SKCanvas canvas = surface.Canvas;
+          canvas.Clear(SKColors.Black);
+          if (session == null
+              || !session.TryCopyLatestFrame(ref _frameBuffer, out int width, out int height)
+              || width <= 0 || height <= 0) { return; }
+
+          if (_bitmap == null || _bitmap.Width != width || _bitmap.Height != height)
+          {
+              _bitmap?.Dispose();
+              _bitmap = new SKBitmap(new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Opaque));
+          }
+          System.Runtime.InteropServices.Marshal.Copy(_frameBuffer, 0, _bitmap.GetPixels(), width * height * 4);
+
+          float scale = Math.Min((float)info.Width / width, (float)info.Height / height);
+          float destWidth = width * scale;
+          float destHeight = height * scale;
+          float destX = (info.Width - destWidth) / 2f;
+          float destY = (info.Height - destHeight) / 2f;
+
+          int restoreTo = canvas.Save();
+          if (mirror) { canvas.Scale(-1, 1, destX + (destWidth / 2f), 0); }
+          canvas.DrawBitmap(_bitmap, new SKRect(destX, destY, destX + destWidth, destY + destHeight),
+              new SKSamplingOptions(SKFilterMode.Linear));
+          canvas.RestoreToCount(restoreTo);
+      }
+  }
+
+Feeding frames to a vision pipeline (the WebcamPainter pattern): pull the
+frame on the capture event and hand it to a worker with latest-wins
+dropping, so slow inference never blocks capture:
+  session.FrameReceived += (_, _) =>
+  {
+      if (session.TryCopyLatestFrame(ref _visionBuffer, out int w, out int h))
+      {
+          tracker.SubmitFrame(_visionBuffer, w, h);   //worker copies + signals; drops stale
+      }
+  };
+The complete worked example - MediaPipe hand tracking through
+CodeBrix.VideoProcessing.OpenCV5, painting on a captured still - is the
+WebcamPainter sample in the CodeBrix.Samples repo.
+
+Reference applications: samples/WebcamViewer in THIS repo (device dropdown,
+live preview, frame-photos to disk); WebcamPainter in the CodeBrix.Samples
+repo (two-mode capture-then-paint flow, mirrored UX, hand tracking).
 
 
 CODING CONVENTIONS (CodeBrix family)
