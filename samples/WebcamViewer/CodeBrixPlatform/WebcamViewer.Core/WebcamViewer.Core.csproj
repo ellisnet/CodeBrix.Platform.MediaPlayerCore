@@ -22,7 +22,7 @@
     <PackageReference Include="CodeBrix.Platform.ApacheLicenseForever" Version="1.0.193.1124" />
 
     <!-- SKXamlCanvas - the SkiaSharp video surface hosted in CodeBrix.Platform XAML -->
-    <PackageReference Include="CodeBrix.Platform.SkiaSharp.Views.MitLicenseForever" Version="4.150.0" />
+    <PackageReference Include="CodeBrix.Platform.SkiaSharp.Views.MitLicenseForever" Version="4.150.1" />
 
     <!-- Bundled Open Sans font -->
     <PackageReference Include="CodeBrix.Platform.Fonts.OpenSans.ApacheLicenseForever" Version="1.0.181.655" />

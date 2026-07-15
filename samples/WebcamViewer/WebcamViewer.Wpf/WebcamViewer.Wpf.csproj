@@ -25,7 +25,7 @@
   <ItemGroup>
     <PackageReference Include="CodeBrix.Platform.WPF.ApacheLicenseForever" Version="1.0.183.475" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
-    <PackageReference Include="SkiaSharp.Views.WPF" Version="4.150.0" />
+    <PackageReference Include="SkiaSharp.Views.WPF" Version="4.150.1" />
 
     <!-- PNG encoding for the frame-photo feature -->
     <PackageReference Include="CodeBrix.Imaging.ApacheLicenseForever" Version="1.0.164.1087" />
