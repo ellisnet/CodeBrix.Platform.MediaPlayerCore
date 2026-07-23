@@ -446,11 +446,19 @@ internal sealed class MediaFoundationCaptureBackend : ICaptureBackend
             ThrowOnFailure(MFEnumDeviceSources(attributes, out activateArray, out count),
                 "MFEnumDeviceSources");
 
-            // Match by device path (the DirectShow DevicePath and the MF symbolic link
-            // share the PnP instance segment; only the trailing interface GUID differs),
-            // falling back to the friendly name.
+            // Match by device path. The DirectShow DevicePath and the MF symbolic link
+            // name the same KS device interface through different interface-class GUIDs,
+            // so the comparison key strips the GUID but KEEPS the trailing reference
+            // string: on devices whose cameras are separate filter factories on ONE PnP
+            // instance (e.g. the Qualcomm camera subsystem on Windows-on-ARM Surfaces,
+            // where front and rear differ only in that reference string), the reference
+            // string is the only part that tells the cameras apart. Fall back to the
+            // instance segment alone (pre-existing behavior for drivers whose reference
+            // strings differ across categories), then to the friendly name.
+            var wantedKey = DeviceMatchKey(_device.Id);
             var wantedInstance = InstanceSegment(_device.Id);
-            IMFActivate match = null;
+            IMFActivate keyMatch = null;
+            IMFActivate instanceMatch = null;
             IMFActivate nameMatch = null;
             var wrappers = new IMFActivate[count];
             for (uint i = 0; i < count; i++)
@@ -461,10 +469,15 @@ internal sealed class MediaFoundationCaptureBackend : ICaptureBackend
                 wrappers[i] = activate;
 
                 var symbolicLink = GetAllocatedString(activate, MfDevsourceAttributeVidcapSymbolicLink);
-                if (match == null && wantedInstance != null
+                if (keyMatch == null && wantedKey != null
+                    && string.Equals(DeviceMatchKey(symbolicLink), wantedKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    keyMatch = activate;
+                }
+                if (instanceMatch == null && wantedInstance != null
                     && string.Equals(InstanceSegment(symbolicLink), wantedInstance, StringComparison.OrdinalIgnoreCase))
                 {
-                    match = activate;
+                    instanceMatch = activate;
                 }
                 if (nameMatch == null)
                 {
@@ -476,7 +489,7 @@ internal sealed class MediaFoundationCaptureBackend : ICaptureBackend
                 }
             }
 
-            var chosen = match ?? nameMatch;
+            var chosen = keyMatch ?? instanceMatch ?? nameMatch;
             if (chosen == null)
             {
                 throw new WebcamException(
@@ -728,7 +741,7 @@ internal sealed class MediaFoundationCaptureBackend : ICaptureBackend
     /// The PnP instance segment of a device-interface path — the part before the
     /// interface-class GUID, e.g. <c>\\?\usb#vid_046d&amp;pid_0944&amp;mi_00#7&amp;10e98aea&amp;0&amp;0000</c>.
     /// </summary>
-    private static string InstanceSegment(string deviceInterfacePath)
+    internal static string InstanceSegment(string deviceInterfacePath)
     {
         if (string.IsNullOrEmpty(deviceInterfacePath))
         {
@@ -736,6 +749,31 @@ internal sealed class MediaFoundationCaptureBackend : ICaptureBackend
         }
         var guidStart = deviceInterfacePath.IndexOf("#{", StringComparison.Ordinal);
         return guidStart > 0 ? deviceInterfacePath.Substring(0, guidStart) : deviceInterfacePath;
+    }
+
+    /// <summary>
+    /// A device-interface path with ONLY the interface-class GUID removed — the PnP
+    /// instance segment plus the KS reference string, e.g.
+    /// <c>\\?\usb#vid_046d&amp;mi_00#7&amp;10e98aea&amp;0&amp;0000\global</c>. Unlike
+    /// <see cref="InstanceSegment"/>, this keeps the reference string, which is the only
+    /// part that distinguishes cameras sharing one PnP instance (front vs. rear on
+    /// Qualcomm Windows-on-ARM devices).
+    /// </summary>
+    internal static string DeviceMatchKey(string deviceInterfacePath)
+    {
+        if (string.IsNullOrEmpty(deviceInterfacePath))
+        {
+            return null;
+        }
+        var guidStart = deviceInterfacePath.IndexOf("#{", StringComparison.Ordinal);
+        if (guidStart <= 0)
+        {
+            return deviceInterfacePath;
+        }
+        var guidEnd = deviceInterfacePath.IndexOf('}', guidStart);
+        return guidEnd < 0
+            ? deviceInterfacePath.Substring(0, guidStart)
+            : deviceInterfacePath.Substring(0, guidStart) + deviceInterfacePath.Substring(guidEnd + 1);
     }
 
     private static Guid? SubtypeForFormat(ImagingPixelFormat format) => format switch

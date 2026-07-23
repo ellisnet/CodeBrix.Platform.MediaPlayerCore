@@ -32,6 +32,6 @@
     All other packages come from WebcamViewer.Core.
   -->
   <ItemGroup>
-    <PackageReference Include="CodeBrix.Platform.Runtime.Skia.Wpf.ApacheLicenseForever" Version="1.0.193.1124" />
+    <PackageReference Include="CodeBrix.Platform.Runtime.Skia.Wpf.ApacheLicenseForever" Version="1.0.203.162" />
   </ItemGroup>
 </Project>
