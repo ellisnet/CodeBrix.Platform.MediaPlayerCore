@@ -361,8 +361,8 @@ every PR to this repo.
   - `<GenerateDocumentationFile>` is on. Every `public` (and `protected` on
     unsealed) member needs an XML doc comment. Never add `<NoWarn>1591</>`;
     fix CS1591 at source.
-  - Test project uses xUnit v3 + SilverAssertions + coverlet.collector. No
-    NUnit, no MSTest, no FluentAssertions.
+  - Test project uses xUnit v3 + SilverAssertions. No NUnit, no MSTest, no 
+    FluentAssertions.
   - Ported files (copied from an upstream open-source project) carry a
     `//was previously: <upstream.namespace>;` provenance comment on the
     `namespace` line. Upstream copyright / license headers are preserved
