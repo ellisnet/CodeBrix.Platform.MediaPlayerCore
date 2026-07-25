@@ -63,9 +63,16 @@ public class MediaConfiguration
 
     const string ENABLE_HW_APPLE = ":videotoolbox";
     const string ENABLE_HW_WINDOWS = ":avcodec-hw=d3d11va";
+    // Linux uses FFmpeg's avcodec hardware-acceleration selector: "any" lets libvlc auto-pick an available
+    // backend (VA-API / VDPAU); "none" forces pure software decoding. Previously the Linux branches returned
+    // string.Empty, so EnableHardwareDecoding = false was a no-op on Linux (hardware decode could not be
+    // turned off) - which breaks memory-output (vmem) rendering, whose GPU-surface frames cannot be adapted
+    // to the system-memory format the sink requires.
+    const string ENABLE_HW_LINUX = ":avcodec-hw=any";
 
     const string DISABLE_HW_APPLE = ":no-videotoolbox";
     const string DISABLE_HW_WINDOWS = ":avcodec-hw=none";
+    const string DISABLE_HW_LINUX = ":avcodec-hw=none";
 
     private string HardwareDecodingOptionString(bool enable)
     {
@@ -75,7 +82,7 @@ public class MediaConfiguration
                 return ENABLE_HW_WINDOWS;
             if (PlatformHelper.IsMac)
                 return ENABLE_HW_APPLE;
-            return string.Empty;
+            return ENABLE_HW_LINUX;
         }
         else
         {
@@ -83,7 +90,7 @@ public class MediaConfiguration
                 return DISABLE_HW_WINDOWS;
             if (PlatformHelper.IsMac)
                 return DISABLE_HW_APPLE;
-            return string.Empty;
+            return DISABLE_HW_LINUX;
         }
 
     }
