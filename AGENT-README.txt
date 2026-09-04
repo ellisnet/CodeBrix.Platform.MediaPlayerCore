@@ -15,7 +15,7 @@ audio through callbacks, discovers local media sources and network
 renderers (Chromecast / UPnP), applies an audio equalizer, and routes
 libvlc's user dialogs and log output to managed code.
 
-Provenance: the package is a port of LibVLCSharp 3.9.7 (the official .NET
+Provenance: the package is a port of LibVLCSharp (the official .NET
 wrapper for libvlc), restricted to the cross-platform managed core and
 narrowed to .NET 10. Upstream namespaces (LibVLCSharp.Shared.*) were
 renamed to CodeBrix.Platform.MediaPlayerCore.*; do NOT write upstream

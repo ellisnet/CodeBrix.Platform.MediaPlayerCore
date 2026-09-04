@@ -38,7 +38,16 @@ provenance, architecture and conventions.
 REPOSITORY LAYOUT
 =================
     CodeBrix.Platform.MediaPlayerCore.slnx   solution: 3 library projects,
-                                             2 test projects, Solution Items
+                                             2 test projects, and a Solution
+                                             Items folder carrying
+                                             .gitignore, AGENT-README.txt,
+                                             EXTRAS-README.txt, global.json,
+                                             icon-codebrix-128.png, LICENSE,
+                                             MAINTAINER-README.txt,
+                                             README-INDEX.txt, README.md and
+                                             THIRD-PARTY-NOTICES.txt (plus the
+                                             stale MAC-PORTING-GUIDE.txt entry
+                                             noted below)
     AGENT-README.txt                         consumer docs: CodeBrix.MediaCore
     MAINTAINER-README.txt                    this file
     EXTRAS-README.txt                        samples/tools description
@@ -47,6 +56,9 @@ REPOSITORY LAYOUT
     LICENSE                                  LGPL-2.1 text (packed in all three)
     THIRD-PARTY-NOTICES.txt                  upstream attribution (packed)
     icon-codebrix-128.png                    package icon (packed)
+    global.json                              selects the
+                                             Microsoft.Testing.Platform test
+                                             runner; pins no SDK version
     AGENTS.md, CLAUDE.md, .clinerules, .cursorrules, .windsurfrules,
     .cursor/rules/agent-readme.mdc, .github/copilot-instructions.md,
     .junie/guidelines.md                     AI pointer stubs -> AGENT-README
@@ -161,9 +173,22 @@ BUILDING
 TESTING
 =======
 Test framework: xUnit v3, asserted with SilverAssertions. Test projects
-are net10.0 with AllowUnsafeBlocks.
+are net10.0 with AllowUnsafeBlocks. Neither test project uses a coverage
+collector.
 
     dotnet test CodeBrix.Platform.MediaPlayerCore.slnx
+
+THE TEST RUNNER IS Microsoft.Testing.Platform, selected by global.json at
+the repository root. That file does NOT pin an SDK version, so the newest
+installed .NET 10 SDK is still used; it exists solely to select the
+runner:
+
+    { "test": { "runner": "Microsoft.Testing.Platform" } }
+
+Because the setting lives in global.json rather than in the test csprojs,
+it applies to every `dotnet test` run anywhere in the repository. Keep the
+file committed -- without it `dotnet test` silently falls back to the
+older VSTest bridge.
 
 Native libvlc for the engine tests:
   - Tests that construct LibVLC need native libvlc on the host. The

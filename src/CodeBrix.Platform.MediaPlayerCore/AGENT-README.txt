@@ -28,7 +28,7 @@ player library agree on one interface without referencing each other) and
 the MediaPosition helper. The CodeBrix.Platform MediaPlayer add-in is the
 consumer this seam was kept for.
 
-Provenance: a port of LibVLCSharp 3.9.7's IVideoView and
+Provenance: a port of LibVLCSharp's IVideoView and
 Shared/MediaPlayerElement sources. Upstream namespaces LibVLCSharp.Shared
 and LibVLCSharp.Shared.MediaPlayerElement became
 CodeBrix.Platform.MediaPlayerCore and
