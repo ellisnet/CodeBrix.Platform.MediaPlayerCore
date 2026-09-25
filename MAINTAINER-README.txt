@@ -193,9 +193,13 @@ older VSTest bridge.
 Native libvlc for the engine tests:
   - Tests that construct LibVLC need native libvlc on the host. The
     CodeBrix.Platform.MediaPlayerCore.Tests csproj conditionally references
-    VideoLAN.LibVLC.Windows on Windows and VideoLAN.LibVLC.Mac on macOS
-    (the Mac package is x64-only; on Apple Silicon install VLC.app
-    instead). On Linux install `libvlc5 vlc-plugin-base`. Tests that
+    VideoLAN.LibVLC.Windows on Windows. On macOS (Intel and Apple Silicon)
+    install VLC.app into /Applications; the test projects deliberately do
+    NOT reference VideoLAN.LibVLC.Mac (2026-09-24): its libvlc.dylib is an
+    x64-only 2018 build without the imem plugin, and once copied into the
+    test output it wins over VLC.app, so the two VideoFrameSourceTests
+    "..._on_a_host_with_the_imem_plugin" failed on Intel Macs. On Linux
+    install `libvlc5 vlc-plugin-base`. Tests that
     cannot locate libvlc at runtime skip themselves (CoreLoadingTests
     covers the failure path).
   - BaseSetup creates the shared fixture as
@@ -222,7 +226,7 @@ Opt-in playback tests (engine):
 
 Webcam tests:
   - CodeBrix.Webcam.Tests needs NO libvlc on Windows (Media Foundation
-    backend); it references VideoLAN.LibVLC.Mac on macOS only.
+    backend); on macOS it uses VLC.app (no libvlc package reference).
   - PublicApiLeakTests reflects over every exported signature of
     CodeBrix.Webcam and fails if a CodeBrix.Platform.MediaPlayerCore type
     appears. If it fails, fix the API — never the test.
